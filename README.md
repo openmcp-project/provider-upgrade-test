@@ -26,7 +26,7 @@ The tool follows these steps to test provider version upgradability:
 
 ## Requirements and Setup
 
-To run the test, you need to have following cli installed: `kind, kubectl, [chainsaw](https://kyverno.github.io/chainsaw/latest/quick-start/), sed, yq, jq`
+To run the test, you need to have following cli installed: `kind`, `kubectl`, [`chainsaw`](https://kyverno.github.io/chainsaw/latest/quick-start/), `sed`, `yq`, `jq`
 
 ### Example usage
 ```bash
