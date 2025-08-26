@@ -1,0 +1,17 @@
+apiVersion: environment.btp.sap.crossplane.io/v1alpha1
+kind: CloudFoundryEnvironment
+metadata:
+  name: cf-env-dummy-test-upgrade
+spec:
+  forProvider:
+    initialOrgManagers:
+      - $TECHNICAL_USER_EMAIL
+    landscape: cf-eu10
+    orgName: dummy-org
+  cloudManagementRef:
+    name: my-cis
+  subaccountRef:
+    name: upgrade-test-subaccount
+  providerConfigRef:
+    name: account-provider-config
+    

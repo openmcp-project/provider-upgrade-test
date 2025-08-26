@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# ENV needed for provider docker credentials
+export SOURCE_DOCKER_USERNAME=
+export SOURCE_DOCKER_PASSWORD=
+export SOURCE_DOCKER_EMAIL=
+export SOURCE_DOCKER_REGISTRY=
+export TARGET_DOCKER_USERNAME=
+export TARGET_DOCKER_PASSWORD=
+export TARGET_DOCKER_EMAIL=
+export TARGET_DOCKER_REGISTRY=

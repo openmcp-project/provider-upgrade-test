@@ -1,0 +1,13 @@
+apiVersion: account.btp.sap.crossplane.io/v1alpha1
+kind: Entitlement
+metadata:
+  name: cis-entitlement
+spec:
+  forProvider:
+    serviceName: cis
+    servicePlanName: local
+    enable: true
+    subaccountRef:
+      name: upgrade-test-subaccount
+  providerConfigRef:
+    name: account-provider-config

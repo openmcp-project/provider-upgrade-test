@@ -1,0 +1,12 @@
+apiVersion: account.btp.sap.crossplane.io/v1alpha1
+kind: Directory
+metadata:
+  name: my-directory
+spec:
+  forProvider:
+    description: test dir
+    directoryAdmins:
+      - $TECHNICAL_USER_EMAIL
+    displayName: upgrade test directory
+  providerConfigRef:
+    name: account-provider-config

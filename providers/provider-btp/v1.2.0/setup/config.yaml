@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    namespace: default
+    name: sa-provider-secret
+type: Opaque
+stringData:
+    credentials: |
+        {
+          "email": "INJECT_ENV.TECHNICAL_USER_EMAIL",
+          "username": "INJECT_ENV.TECHNICAL_USER_EMAIL",
+          "password": "INJECT_ENV.TECH_USER_PASSWORD"
+        }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+    namespace: default
+    name: cis-provider-secret
+type: Opaque
+stringData:
+    data: "INJECT_ENV.CIS_CENTRAL_BINDING"
+---
+apiVersion: btp.sap.crossplane.io/v1alpha1d
+kind: ProviderConfig
+metadata:
+    name: account-provider-config
+spec:
+    globalAccount: "INJECT_ENV.GLOBAL_ACCOUNT"
+    cliServerUrl: "INJECT_ENV.CLI_SERVER_URL"
+    cisCredentials:
+        secretRef:
+            name: cis-provider-secret
+            namespace: default
+            key: data
+        source: Secret
+    serviceAccountSecret:
+        secretRef:
+            key: credentials
+            name: sa-provider-secret
+            namespace: default
+        source: Secret
