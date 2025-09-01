@@ -131,7 +131,18 @@ upgrade-test)
     
     
     if [ -d "./providers/${SOURCE_DIR}/setup" ]; then
-        bash generate-yaml-rp-env.sh ./providers/${SOURCE_DIR}/setup
+        if [ -d "./providers/${SOURCE_DIR}/crs" ]; then
+            print_color_message ${BLUE} "Processing both setup and CRS directories..."
+            bash generate-yaml-rp-env.sh ./providers/${SOURCE_DIR}/setup ./providers/${SOURCE_DIR}/crs
+        else
+            print_color_message ${BLUE} "Processing setup directory only..."
+            bash generate-yaml-rp-env.sh ./providers/${SOURCE_DIR}/setup
+        fi
+    elif [ -d "./providers/${SOURCE_DIR}/crs" ]; then
+        print_color_message ${BLUE} "Processing CRS directory only..."
+        bash generate-yaml-rp-env.sh "" ./providers/${SOURCE_DIR}/crs
+    else
+        print_color_message ${YELLOW} "Warning: Neither setup nor CRS directories found for ${SOURCE_DIR}"
     fi
     
     if [ -z "$INITIALIZE_SCRIPT" ]; then
@@ -143,6 +154,12 @@ upgrade-test)
 
     # todo: if the config doenst have a new line in the end there's no line of source:secret
     kubectl apply -f ./generated/temp-generated/
+    
+    # Apply CRS files if they exist
+    if [ -d "./generated/temp-generated/crs" ]; then
+        print_color_message ${BLUE} "Applying CRS manifests..."
+        kubectl apply -f ./generated/temp-generated/crs/
+    fi
     chainsaw  test --test-dir ./providers/${SOURCE_DIR}/ --skip-delete 
     test_result=$?
     if [ $test_result -ne 0 ]; then
