@@ -9,7 +9,7 @@ spec:
     displayName: upgrade-test-subaccount
     region: eu10
     subaccountAdmins:
-      - "INJECT_ENV.TECHNICAL_USER_EMAIL"
+      - INJECT_ENV.TECHNICAL_USER_EMAIL
     subdomain: dummy-upgrade-test-subaccount
     usedForProduction: "NOT_USED_FOR_PRODUCTION"
   providerConfigRef:

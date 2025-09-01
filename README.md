@@ -97,7 +97,7 @@ stringData:
     credentials: |
         {
           "username": "tech_user",
-          "password": "INJECT_ENV.TECH_USER_PASSWORD"
+          "password": "INJECT_ENV.TECHNICAL_USER_EMAIL"
         }
 EOF
 
@@ -129,7 +129,7 @@ mv auto-generated-chainsaw-test.yaml providers/provider-example/$VERSION/chainsa
 ```
 with steps above, you can already run a test for provider provider-example to upgrade from version v1.0 to version v2.0, remeember, before running the tests set the env variables needed 
 ```shell
-export TECH_USER_PASSWORD=your_password
+export TECHNICAL_USER_EMAIL=your_password
 REGISTRY=ghcr.io/sap/crossplane-provider-btp/crossplane/provider-btp
 ./provider-test.sh upgrade-test --source "${REGISTRY}:v1.0" --target "${REGISTRY}:v2.0" --provider provider-example
 ```

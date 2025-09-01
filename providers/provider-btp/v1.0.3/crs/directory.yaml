@@ -6,8 +6,8 @@ spec:
   forProvider:
     description: test dir
     directoryAdmins:
-      - "INJECT_ENV.TECHNICAL_USER_EMAIL"
-      - "INJECT_ENV.SECOND_DIRECTORY_ADMIN_EMAIL"
+      - INJECT_ENV.TECHNICAL_USER_EMAIL
+      - INJECT_ENV.SECOND_DIRECTORY_ADMIN_EMAIL
     displayName: upgrade test directory
   providerConfigRef:
     name: account-provider-config
