@@ -13,6 +13,73 @@ rm -rf generated/*
 
 check_required_command_exists
 
+# Built-in initialize function
+initialize_yaml_files() {
+    local source_dir="$1"
+    print_color_message ${BLUE} "Initializing YAML files with timestamp..."
+    
+    local current_date=$(date +%Y-%m-%d-%H-%M)
+    local old_string="PLACEHOLDER"
+    local new_string="${current_date}"
+    
+    # Update CRs in the folder
+    for file in "generated/${source_dir}/crs"/*.yaml; do
+        if [ -f "$file" ] && grep -q -- "${old_string}" "$file"; then
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                sed -i '' "s/$old_string/$new_string/g" "$file"
+            elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+                sed -i "s/$old_string/$new_string/g" "$file"
+            fi
+        fi
+    done
+    
+    # Update chainsaw test file
+    local chainsaw_file="generated/${source_dir}/chainsaw-test.yaml"
+    if [ -f "$chainsaw_file" ] && grep -q -- "${old_string}" "$chainsaw_file"; then
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' "s/$old_string/$new_string/g" "$chainsaw_file"
+        elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            sed -i "s/$old_string/$new_string/g" "$chainsaw_file"
+        fi
+    fi
+    
+    print_color_message ${BLUE} "YAML files updated with timestamp: $new_string"
+}
+
+# Built-in cleanup function
+cleanup_resources() {
+    local source_dir="$1"
+    print_color_message ${BLUE} "Cleaning up test resources..."
+    
+    kubectl delete -f "generated/${source_dir}/crs/" --ignore-not-found=true
+    
+    print_color_message ${BLUE} "Checking deletion status of managed resources..."
+    local timeout_duration=$((60 * 60))  # 1 hour
+    local interval=30
+    local start_time=$(date +%s)
+    
+    while true; do
+        local current_time=$(date +%s)
+        local elapsed_time=$((current_time - start_time))
+        
+        if [ "$elapsed_time" -ge "$timeout_duration" ]; then
+            print_color_message ${YELLOW} "Timeout reached while waiting for resource cleanup."
+            break
+        fi
+        
+        local resources=$(kubectl get managed --no-headers 2>/dev/null)
+        
+        if [ -n "$resources" ]; then
+            print_color_message ${BLUE} "Managed resources still exist, waiting..."
+        else
+            print_color_message ${GREEN} "No managed resources found. Cleanup complete."
+            break
+        fi
+        
+        sleep "$interval"
+    done
+}
+
 COMMAND=$1
 shift
 case $COMMAND in
@@ -22,12 +89,12 @@ upgrade-test)
     WAIT_USER_INPUT="no"
     PROVIDER_NAME="provider-btp"
     INSTALL_CROSSPLANE=true
+    
     while [[ $# -gt 0 ]]; do
         case $1 in
         --source)
             SOURCE_REGISTRY="$2"
             SOURCE_VERSION="${SOURCE_REGISTRY##*:}"
-            echo $SOURCE_VERSION
             if [[ -z "$SOURCE_VERSION" || "$SOURCE_VERSION" == "$SOURCE_REGISTRY" ]]; then
                 SOURCE_VERSION="latest"
             fi
@@ -36,14 +103,6 @@ upgrade-test)
         --source-dir)
             SOURCE_DIR="$2"
             shift 2
-            ;;
-        --source-docker-auth)
-            SOURCE_NEED_AUTH=true
-            shift
-            ;;
-        --target-docker-auth)
-            TARGET_NEED_AUTH=true
-            shift
             ;;
         --target)
             TARGET_REGISTRY="$2"
@@ -55,14 +114,6 @@ upgrade-test)
             ;;
         --provider)
             PROVIDER_NAME="$2"
-            shift 2
-            ;;
-        --initialize)
-            INITIALIZE_SCRIPT="$2"
-            shift 2
-            ;;
-        --cleanup)
-            CLEANUP_SCRIPT="$2"
             shift 2
             ;;
         --wait-user-input)
@@ -83,23 +134,23 @@ upgrade-test)
             ;;
         *)
             print_help
+            exit 1
             ;;
         esac
     done
 
     date
     echo "----------------------------------------------------------------------------"
-    echo "Value of --source: $SOURCE_REGISTRY"
-    echo "Value of --target: $TARGET_REGISTRY"
-    echo "Value of --source-dir: $SOURCE_DIR"
-    echo "Value of --source-docker-auth: $SOURCE_NEED_AUTH"
-    echo "Value of --target-docker-auth: $TARGET_NEED_AUTH"
-    echo "Value of --provider: $PROVIDER_NAME"
-    echo "Value of --wait-user-input: $WAIT_USER_INPUT"
-    echo "Value of --use-cluster-context: $USE_CLUSTER_CONTEXT"
-    echo "Value of --skip-crossplane-install: $INSTALL_CROSSPLANE"
+    echo "Source registry: $SOURCE_REGISTRY"
+    echo "Target registry: $TARGET_REGISTRY"
+    echo "Source directory: $SOURCE_DIR"
+    echo "Provider: $PROVIDER_NAME"
+    echo "Wait for user input: $WAIT_USER_INPUT"
+    echo "Cluster context: $USE_CLUSTER_CONTEXT"
+    echo "Install Crossplane: $INSTALL_CROSSPLANE"
     echo "----------------------------------------------------------------------------"
 
+    # Validate required parameters
     exec_params_check
 
     # Get the basename of SOURCE_DIR for the generated directory structure
@@ -125,7 +176,7 @@ upgrade-test)
     cat generated/${PROVIDER_NAME}-source.yaml
     printf "\n\n" 
     wait_user_input ${WAIT_USER_INPUT} "Do you want to deploy the source version $SOURCE_VERSION provider? (y/n): "
-    
+
 
     kubectl apply -f generated/${PROVIDER_NAME}-source.yaml
     print_color_message ${BLUE} "Waiting for provider to become healthy..."
@@ -137,13 +188,7 @@ upgrade-test)
         bash generate-yaml-rp-env.sh ./providers/${SOURCE_DIR}
     fi
     
-    if [ -z "$INITIALIZE_SCRIPT" ]; then
-        print_color_message ${BLUE} "No initialize script provided, skipping initialization..."
-    else
-        print_color_message ${BLUE} "Running initialize script..."
-        chmod +x $INITIALIZE_SCRIPT && bash $INITIALIZE_SCRIPT
-    fi
-
+    initialize_yaml_files "${SOURCE_DIR_BASENAME}"
     # Apply the generated CRs from the new structure
     if [ -d "./generated/${SOURCE_DIR_BASENAME}/setup" ]; then
         kubectl apply -f ./generated/${SOURCE_DIR_BASENAME}/setup/
@@ -160,6 +205,8 @@ upgrade-test)
     
     if [ $test_result -ne 0 ]; then
         print_color_message ${RED} "*****provider $PROVIDER_NAME CR resources can not be all applied at source version $SOURCE_VERSION, stop tests."
+        # Cleanup resources before exiting
+        cleanup_resources "${SOURCE_DIR_BASENAME}"
         exit 1
     fi
 
@@ -181,6 +228,8 @@ upgrade-test)
     provider_upgrade_result=$?
     if [ $provider_upgrade_result -ne 0 ]; then
         print_color_message ${RED} "*****Test results: provider $PROVIDER_NAME can not upgrade from $SOURCE_VERSION to $TARGET_VERSION."
+        # Cleanup resources before exiting
+        cleanup_resources "${SOURCE_DIR_BASENAME}"
         exit 1
     fi
     status_provider_upgrade="✔ True"
@@ -218,6 +267,9 @@ upgrade-test)
     
     print_color_message ${GREEN} "Finished upgrade test from $SOURCE_VERSION to $TARGET_VERSION for $PROVIDER_NAME."
     print_test_steps_summary "✔ True" "✔ True" "$status_provider_upgrade" "$status_resources_check_after_upgrade" "$status_provider_alwasy_healthy" 
+
+    # Cleanup test resources from generated directory
+    cleanup_resources "${SOURCE_DIR_BASENAME}"
 
     if [ -n "$CLEANUP_SCRIPT" ]; then
         print_color_message ${BLUE} "Running cleanup script..."

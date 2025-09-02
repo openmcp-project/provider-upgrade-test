@@ -6,7 +6,7 @@ spec:
   forProvider:
     initialOrgManagers:
       - INJECT_ENV.TECHNICAL_USER_EMAIL
-    landscape: cf-eu10
+    landscape: cf-eu20
   cloudManagementRef:
     name: my-cis
   subaccountRef:

@@ -34,14 +34,18 @@ process_file() {
             if [[ -n "$env_value" ]]; then
                 # For JSON content, compact it to a single line while preserving structure
                 if [[ "$env_value" =~ ^\s*\{ ]] || [[ "$env_value" =~ ^\s*\[ ]]; then
-                    # This looks like JSON, first remove literal \n and \r from certificate data
-                    clean_value=$(echo "$env_value" | sed 's/\\n//g' | sed 's/\\r//g')
-                    # Then compact it properly
-                    clean_value=$(echo "$clean_value" | jq -c . 2>/dev/null || echo "$clean_value" | tr -d '\n\r' | tr -s ' ')
+                    # This looks like JSON, properly handle escaped characters and newlines
+                    # First remove actual newlines and carriage returns (not escaped ones)
+                    clean_value=$(echo "$env_value" | tr -d '\n\r')
+                    # Remove literal \n and \r sequences that might be in the data
+                    clean_value=$(echo "$clean_value" | sed 's/\\n//g' | sed 's/\\r//g' | sed 's/\\t//g')
+                    # Try to compact with jq, fallback to manual compacting if jq fails
+                    clean_value=$(echo "$clean_value" | jq -c . 2>/dev/null || echo "$clean_value" | tr -s ' ')
                 else
                     # For non-JSON content, just remove all whitespace
                     clean_value=$(echo "$env_value" | tr -d '[:space:]')
                 fi
+                # Properly escape quotes for YAML insertion
                 clean_value="${clean_value//\"/\\\"}"
                 # Replace the placeholder with the cleaned value in quotes
                 line="${line//INJECT_ENV.${var_name}/\"${clean_value}\"}"

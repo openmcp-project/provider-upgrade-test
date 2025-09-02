@@ -18,76 +18,102 @@ To view the help message, run:
 The tool follows these steps to test provider version upgradability:
 
 1. **Deploy Source Version Provider**: Deploy the provider at the specified source version.
-2. **Apply Source Provider CRs**: Apply the Custom Resources (CRs) associated with the source version.
+2. **Apply Source Provider CRs**: Apply the Custom Resources (CRs) associated with the source version (with automatic timestamp initialization).
 3. **Upgrade Provider to Target Version**: Upgrade the provider to the specified target version.
 4. **Check CR Health**: Verify that the CRs deployed before the upgrade remain healthy after the upgrade.
 5. **Check Provider Health**: Ensure that the provider stays healthy for 10 minutes after the upgrade.
-
+6. **Automatic Cleanup**: Clean up all test resources with proper managed resource deletion waiting.
 
 ## Requirements and Setup
 
 To run the test, you need to have following cli installed: `kind`, `kubectl`, [`chainsaw`](https://kyverno.github.io/chainsaw/latest/quick-start/), `sed`, `yq`, `jq`
 
-### Example usage
+## Usage
+
+### Basic Command
 ```bash
-REGISTRY=ghcr.io/sap/crossplane-provider-btp/crossplane/provider-btp
-./provider-test.sh upgrade-test --source "${REGISTRY}:v1.0.3" --target "${REGISTRY}:v1.1.0" --provider provider-btp --initialize providers/provider-btp/scripts/initialize.sh --cleanup providers/provider-btp/scripts/cleanup.sh --wait-user-input
+./provider-test.sh upgrade-test \
+  --source crossplane/provider-btp:v1.0.3 \
+  --target crossplane/provider-btp:v1.1.0 \
+  --source-dir provider-btp/v1.0.3
 ```
 
-### General structure
+### Available Options
+
+| Option | Required | Description | Default |
+|--------|----------|-------------|---------|
+| `--source` | Yes | Source version provider docker registry with tag | - |
+| `--target` | Yes | Target version provider docker registry with tag | - |
+| `--source-dir` | Yes | Source provider CR test directory (relative to providers/) | - |
+| `--provider` | No | Provider name to deploy | provider-btp |
+| `--wait-user-input` | No | Prompt for user input at each step | No prompting |
+| `--use-cluster-context` | No | Use existing cluster context instead of creating new cluster | Creates new cluster |
+| `--skip-crossplane-install` | No | Skip crossplane installation | Installs crossplane |
+
+### Example Commands
+
+**Basic upgrade test:**
 ```bash
-./provider-test.sh upgrade-test [--source <arg>] [--target <arg>] [--source-dir <arg>] [--provider <arg>] [--source-docker-auth] [--target-docker-auth] [--initialize <arg>] [--cleanup <arg>] [--use-cluster-context <arg>] [--wait-user-input] [--skip-crossplane-install] [-h|--help]
+./provider-test.sh upgrade-test \
+  --source crossplane/provider-btp:v1.0.3 \
+  --target crossplane/provider-btp:v1.1.0 \
+  --source-dir provider-btp/v1.0.3
 ```
 
-### Options
+**Interactive mode with user prompts:**
+```bash
+./provider-test.sh upgrade-test \
+  --source crossplane/provider-btp:v1.0.3 \
+  --target crossplane/provider-btp:v1.1.0 \
+  --source-dir provider-btp/v1.0.3 \
+  --wait-user-input
+```
 
-- --source: Source version provider Docker registry with tag (required, no default).
-- --target: Target version provider Docker registry with tag (required, no default).
-- --source-dir: Source provider CR test directory relative to the providers folder.
-- --source-docker-auth: toggle on use docker auth for source provider image, credentials need to be set from ENV
-- --target-docker-auth: toggle on use docker auth for target provider image, credentials need to be set from ENV
-- --provider: Name of the provider to test (default: provider-btp).
-- --initialize: specify initiliaze shell script to run before applying source provider CRs tests
-- --cleanup: specify clean up script to run after test process finishes
-- --use-cluster-context: Use an existing Kubernetes cluster context instead of creating a new cluster.
-- --wait-user-input: Prompt for user input during test steps.
-- --skip-crossplane-install: Skip installing Crossplane in the Kubernetes cluster.
-- -h, --help: Display the help message.
+**Using existing cluster:**
+```bash
+./provider-test.sh upgrade-test \
+  --source crossplane/provider-btp:v1.0.3 \
+  --target crossplane/provider-btp:v1.1.0 \
+  --source-dir provider-btp/v1.0.3 \
+  --use-cluster-context my-cluster
+```
 
 ## Development
-Continuing development of this tool remains necessary to adapt to changing providers and its versions.
 Understanding the details of the tool is beneficial to developers. 
 
-### Detail Test Execution Explain
-1. Create kind k8s cluster or use k8s context instead provided by --use-cluster-context
-2. Install crossplane to the k8s cluster if --skip-crossplane-install not specified
-3. Deploy source provider from docker registry provided by --source
-4. Apply k8s resources in setup folder of source provider, variables in format INJECT_ENV.VAR_NAME will be replaced with VAR_NAME's ENV value
-5. Run chainsaw-test.yaml located in the source folder if specified via --source-dir, otherwise try to locate the chainsaw-test.yaml from providers/--provider-name/--source:version
-6. After resouces applied successfully, upgrade provider to version provided by --target and verify if provider stay healthy for 3 minutes
-7. Verify if resources applied before stay healthy
-8. Verify if provider still healthy for 10 minutes
-9. Test finished, generate test results
+### Detailed Test Execution Process
+1. Create kind k8s cluster or use k8s context provided by `--use-cluster-context`
+2. Install crossplane to the k8s cluster if `--skip-crossplane-install` not specified
+3. Deploy source provider from docker registry provided by `--source`
+4. Generate test resources to `generated/` directory and apply k8s resources in setup folder, variables in format `INJECT_ENV.VAR_NAME` will be replaced with `VAR_NAME`'s ENV value
+5. **Automatic initialization**: Replace `PLACEHOLDER` strings in generated YAML files with unique timestamps
+6. Apply the initialized Custom Resources (CRs)
+7. Run chainsaw test to verify resource creation
+8. Upgrade provider to version provided by `--target` and verify provider stays healthy for 2 minutes
+9. Verify if resources applied before upgrade remain healthy
+10. Verify if provider stays healthy for 10 minutes
+11. **Automatic cleanup**: Delete all test resources and wait for managed resource cleanup
+12. Generate test results summary
 
 ### Add test resources for a new provider
-To enable upgrade test for a new provider, you could follow below steps. Let's assume we'd like to create a new test for provider `provider-example` version `v1.0` and `v2.0`
+To enable upgrade test for a new provider, follow these steps. Let's assume we'd like to create a new test for provider `provider-example` version `v1.0` and `v2.0`
 
-1. create new folders under providers
+1. Create new folders under providers
 ```shell
 mkdir providers/provider-example
 mkdir providers/provider-example/v1.0 providers/provider-example/v2.0
 ```
 
-2. add CR resources specific to the source version and the related chainsaw tests
+2. Add CR resources specific to the source version and the related chainsaw tests
 ```shell
 export VERSION=v1.0
 # folder to put CRs
 mkdir providers/provider-example/$VERSION/crs
 
-# folder to put set up resources contain credentials before CRs, credentials can be injected via INJECT_ENV.VAR_NAME
+# folder to put set up resources containing credentials before CRs, credentials can be injected via INJECT_ENV.VAR_NAME
 mkdir providers/provider-example/$VERSION/setup
 
-# add your set up config to the setup folder if exists, for example provider-config, for example:
+# add your set up config to the setup folder if exists, for example provider-config:
 cat <<EOF > providers/provider-example/$VERSION/setup/config.yaml
 apiVersion: v1
 kind: Secret
@@ -101,13 +127,12 @@ stringData:
         }
 EOF
 
-
-# add your crs to the crs folder, for example:
+# add your crs to the crs folder, using PLACEHOLDER for unique naming:
 cat <<EOF > providers/provider-example/$VERSION/crs/book.yaml
 apiVersion: example.crossplane.io/v1alpha1
 kind: Book
 metadata:
-  name: my-book
+  name: my-bookPLACEHOLDER
 spec:
   forProvider:
     name: example-book
@@ -117,52 +142,49 @@ cat <<EOF > providers/provider-example/$VERSION/crs/shelf.yaml
 apiVersion: example.crossplane.io/v1alpha1
 kind: Shelf
 metadata:
-  name: my-shelf
+  name: my-shelf-PLACEHOLDER
 spec:
   forProvider:
     name: example-shelf
 EOF
 
-# now generate the chainsaw-test.yaml for the crs, which will be used in the upgrade-test to determin how and which resources to be applied for the source provider, you could create it manually or use the helper shell script to generate a start up test file for you to adapt.
+# generate the chainsaw-test.yaml for the crs using the helper script:
 ./generate-chainsaw-test.sh providers/provider-example/$VERSION/crs
 mv auto-generated-chainsaw-test.yaml providers/provider-example/$VERSION/chainsaw-test.yaml
 ```
-with steps above, you can already run a test for provider provider-example to upgrade from version v1.0 to version v2.0, remeember, before running the tests set the env variables needed 
+
+With steps above, you can run a test for provider provider-example to upgrade from version v1.0 to version v2.0:
 ```shell
 export TECHNICAL_USER_EMAIL=your_password
-REGISTRY=ghcr.io/sap/crossplane-provider-btp/crossplane/provider-btp
-./provider-test.sh upgrade-test --source "${REGISTRY}:v1.0" --target "${REGISTRY}:v2.0" --provider provider-example
+REGISTRY=ghcr.io/sap/crossplane-provider-example
+./provider-test.sh upgrade-test --source "${REGISTRY}:v1.0" --target "${REGISTRY}:v2.0" --source-dir provider-example/v1.0 --provider provider-example
 ```
-If you need to do some initialize or clean up scripts, you could create some shell scripts and specify them via --initialize and --cleanup.
-
-And to make the provider upgrade tests for versions after v2.0, you should also add the crs, setup config, chainsaw-test.yaml for version v2.0, there's no need to copy the same crs from v1.0 to v2.0, you only need to add what's specific to the version v2.0, as when create the chainsaw-test.yaml for it you could specify the files from other versions for example: `file: ../v1.0/crs/book.yaml`
 
 ### Add new version for existing provider
-When there's new version released for the existing tests provider for example `provider-btp` version `v8.0`, you should add the resources here and enable it for future versions upgrade test.
+When there's a new version released for existing provider (e.g. `provider-btp` version `v8.0`):
 ```shell
 export VERSION=v8.0
-mkdir providers/provider-btp/$VERSION  providers/provider-btp/$VERSION/setup
+mkdir providers/provider-btp/$VERSION providers/provider-btp/$VERSION/setup
 # add setup folder and adjust content if needed
 cp -r providers/provider-btp/v1.0.3/setup/ providers/provider-btp/$VERSION/setup/
 
-# add v8.0 specific resource if exists to crs
+# add v8.0 specific resources if they exist
 mkdir providers/provider-btp/$VERSION/crs
 cat <<EOF > providers/provider-btp/$VERSION/crs/subaccount.yaml
 apiVersion: account.btp.sap.crossplane.io/v1alpha1
 kind: Subaccount
 metadata:
-  name: upgrade-test-subaccount
+  name: upgrade-test-subaccount-PLACEHOLDER
 spec:
   forProvider:
     description: hello subaccount
     new-field-v8: this is a new key-value
 EOF
 
-# add or copy chainsaw-test.yaml and modify the content
+# copy and modify chainsaw-test.yaml
 cp providers/provider-btp/v1.0.3/chainsaw-test.yaml providers/provider-btp/$VERSION/chainsaw-test.yaml
-# modify test content file locations for crs if needed: change from file: crs/directory.yaml to file: ../v1.0.3/crs/directory.yaml
+# modify file locations for crs if needed: change from file: crs/directory.yaml to file: ../v1.0.3/crs/directory.yaml
 ```
-adjust the initialize and clean up scripts if needed.
 
 ## Support, Feedback, Contributing
 

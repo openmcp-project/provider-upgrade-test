@@ -7,8 +7,8 @@ spec:
     name: my-cis
   forProvider:
     parameters:
-      region: eu-central-1  
-    planName: aws
+      region: westeurope 
+    planName: azure
   providerConfigRef:
     name: account-provider-config
   subaccountRef:

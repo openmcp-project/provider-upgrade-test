@@ -217,18 +217,6 @@ func_check_provider_always_healthy() {
     fi
 }
 
-create_provider_image_secret() {
-    local REGISTRY_URL=$1
-    local USERNAME=$2
-    local PASSWORD=$3
-    local EMAIL=$4
-    kubectl create secret docker-registry myregistrykey \
-        --docker-server=$REGISTRY_URL \
-        --docker-username=$USERNAME \
-        --docker-password=$PASSWORD \
-        --docker-email=$EMAIL
-}
-
 install_crossplane_if_needed() {
     $INSTALL_CROSSPLANE && print_color_message ${BLUE} "Installing crossplane..."
     $INSTALL_CROSSPLANE && install_crossplane
@@ -254,25 +242,12 @@ exec_params_check() {
     if [ -z "$SOURCE_REGISTRY" ] || [ -z "$TARGET_REGISTRY" ] || [ -z "$SOURCE_DIR" ] ; then
         print_color_message ${RED} "Error: --source, --target, --source-dir are required for upgrade-test."
         print_help
+        exit 1
     fi 
 
     if [ ! -d "./providers/$SOURCE_DIR" ] || [ ! -f "./providers/$SOURCE_DIR/chainsaw-test.yaml" ]; then
         print_color_message ${RED} "Error: couldn't find test resource under source-dir: $SOURCE_DIR."
         exit 1
-    fi
-
-    if [ "$SOURCE_NEED_AUTH" == true ]; then
-        if [ -z "$SOURCE_DOCKER_USERNAME" ] || [ -z "$SOURCE_DOCKER_PASSWORD" ] || [ -z "$SOURCE_DOCKER_EMAIL" ]; then
-            echo "Error: you specified --source-docker-auth, however one or more required ENV variables (SOURCE_DOCKER_USERNAME, SOURCE_DOCKER_PASSWORD, SOURCE_DOCKER_EMAIL) are empty."
-            exit 1
-        fi
-    fi
-
-    if [ "$TARGET_NEED_AUTH" == true ]; then
-        if [ -z "$TARGET_DOCKER_USERNAME" ] || [ -z "$TARGET_DOCKER_PASSWORD" ] || [ -z "$TARGET_DOCKER_EMAIL" ]; then
-            echo "Error: you specified --source-docker-auth, however one or more required ENV variables (TARGET_DOCKER_USERNAME, TARGET_DOCKER_PASSWORD, TARGET_DOCKER_EMAIL) are empty."
-            exit 1
-        fi
     fi
 }
 
@@ -291,20 +266,18 @@ wait_user_input() {
 
 print_help ()
 {
-    printf '%s\n' "The general script's help msg"
-    printf 'Usage: %s upgrade-test [--source <arg>] [--target <arg>] [--source-dir <arg>] [--provider <arg>] [--initialize <arg>] [--cleanup <arg>] [--source-docker-auth] [--target-docker-auth] [--use-cluster-context <arg>] [--wait-user-input] [--skip-crossplane-install] [--print-pod-logs] [-h|--help] \n' "$0"
-    printf '\t%s\n' "--source: source version provider docker registry with tag (no default)"
-    printf '\t%s\n' "--target: target version provider docker registry with tag (no default)"
-    printf '\t%s\n' "--source-dir: source provider CR test directory relative to providers"
-    printf '\t%s\n' "--source-docker-auth: toggle on use docker auth for source provider image, credentials need to be set from ENV"
-    printf '\t%s\n' "--target-docker-auth: toggle on use docker auth for target provider image, credentials need to be set from ENV"
-    printf '\t%s\n' "--provider: which provider to test, provider name to deploy(default: provider-btp)"
-    printf '\t%s\n' "--initialize: specify initiliaze shell script to run before applying source provider CRs tests"
-    printf '\t%s\n' "--cleanup: specify cleanup shell script to run after upgrade tests finished"
-    printf '\t%s\n' "--use-cluster-context: do not create k8s cluster, instead use a cluster context"
-    printf '\t%s\n' "--wait-user-input: promote for user input within test steps"
-    printf '\t%s\n' "--skip-crossplane-install: skip install crossplane in k8s cluster"
+    printf '%s\n' "Provider Upgrade Test Script"
+    printf 'Usage: %s upgrade-test [--source <arg>] [--target <arg>] [--source-dir <arg>] [--provider <arg>] [--use-cluster-context <arg>] [--wait-user-input] [--skip-crossplane-install] [-h|--help] \n' "$0"
+    printf '\t%s\n' "--source: source version provider docker registry with tag (required)"
+    printf '\t%s\n' "--target: target version provider docker registry with tag (required)"
+    printf '\t%s\n' "--source-dir: source provider CR test directory relative to providers (required)"
+    printf '\t%s\n' "--provider: which provider to test (default: provider-btp)"
+    printf '\t%s\n' "--use-cluster-context: do not create k8s cluster, instead use existing cluster context"
+    printf '\t%s\n' "--wait-user-input: prompt for user input within test steps"
+    printf '\t%s\n' "--skip-crossplane-install: skip installing crossplane in k8s cluster"
     printf '\t%s\n' "-h,--help: Prints help"
+    printf '\n%s\n' "Example:"
+    printf '\t%s\n' "./provider-test.sh upgrade-test --source crossplane/provider-btp:v1.0.3 --target crossplane/provider-btp:v1.1.0 --source-dir provider-btp/v1.0.3"
 }
 
 print_test_steps_summary() {
