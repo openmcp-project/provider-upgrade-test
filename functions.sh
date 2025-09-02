@@ -39,11 +39,6 @@ check_resource_status() {
   echo "Resource $kind/$name is Healthy"
   return 0
 }
-  fi
-
-  echo "Resource $kind/$name is Healthy"
-  return 0
-}
 
 check_crossplane_installation() {
     # Timeout in seconds
