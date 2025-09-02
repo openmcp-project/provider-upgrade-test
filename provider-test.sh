@@ -199,6 +199,14 @@ upgrade-test)
     
     # Run chainsaw test from within the generated directory
     pushd "./generated/${SOURCE_DIR_BASENAME}" > /dev/null
+    
+    # Debug: Check what resources are actually created before running chainsaw
+    echo "Debug: Checking applied resources:"
+    kubectl get subaccount,entitlement,servicemanager,cloudmanagement --no-headers 2>/dev/null || echo "No managed resources found yet"
+    
+    echo "Debug: Checking provider status before chainsaw test:"
+    kubectl get providers/${PROVIDER_NAME} -o json | jq '.status.conditions' || echo "Provider status not available"
+    
     chainsaw test --skip-delete 
     test_result=$?
     popd > /dev/null

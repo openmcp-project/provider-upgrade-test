@@ -49,6 +49,8 @@ process_file() {
                 clean_value="${clean_value//\"/\\\"}"
                 # Replace the placeholder with the cleaned value in quotes
                 line="${line//INJECT_ENV.${var_name}/\"${clean_value}\"}"
+            else
+                echo "Warning: Environment variable $var_name is not set or empty. Leaving placeholder unchanged."
             fi
         fi
         echo "$line" >> "$processed_file"

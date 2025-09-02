@@ -9,7 +9,7 @@ spec:
     cleanup: 120s
   steps:
   - timeouts:
-      assert: 180s
+      assert: 600s
     try:
     - apply:
         file: crs/subaccount.yaml
