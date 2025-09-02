@@ -1,78 +1,90 @@
 #!/usr/bin/env bash
 
-setup_dir=$1
-generated_dir="./generated/temp-generated"
+# Check if source directory path is provided
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <source_directory>"
+    echo "This script copies all folders from the source directory to generated/ and processes INJECT_ENV variables"
+    exit 1
+fi
+
+source_dir="$1"
+generated_dir="./generated"
+
+# Check if source directory exists
+if [ ! -d "$source_dir" ]; then
+    echo "Error: Source directory '$source_dir' does not exist"
+    exit 1
+fi
 
 # Function to process INJECT_ENV placeholders in a file
-process_yaml_file() {
-  local yaml_file="$1"
-  local output_file="$2"
-  local temp_file=$(mktemp)
-
-  cp "$yaml_file" "$temp_file"
-
-  # Loop through each line of the YAML file
-  while IFS= read -r line; do
-    if [[ "$line" =~ INJECT_ENV\.([a-zA-Z_]+) ]]; then
-      var_name="${BASH_REMATCH[1]}"
-      env_value="${!var_name}"
-      if [[ ! -z "$env_value" ]]; then
-        # Strip all newlines and format as a simple string
-        clean_value=$(echo "$env_value" | tr -d '\n\r' | sed 's/"/\\"/g')
-        # Replace the placeholder with the cleaned value in quotes
-        line="${line//INJECT_ENV.${var_name}/\"${clean_value}\"}"
-      fi
-    fi
-    echo "$line" >> "${temp_file}_processed"
-  done < "$temp_file"
-
-  # Move processed file to the output location
-  mv "${temp_file}_processed" "$output_file"
-
-  # Clean up the temporary file
-  rm "$temp_file"
+process_file() {
+    local input_file="$1"
+    local temp_file=$(mktemp)
+    local processed_file="${temp_file}_processed"
+    
+    # Copy original file to temp
+    cp "$input_file" "$temp_file"
+    
+    # Process each line looking for INJECT_ENV placeholders
+    # Use -r to preserve backslashes and handle files without trailing newlines
+    while IFS= read -r line || [ -n "$line" ]; do
+        if [[ "$line" =~ INJECT_ENV\.([a-zA-Z_][a-zA-Z0-9_]*) ]]; then
+            var_name="${BASH_REMATCH[1]}"
+            env_value="${!var_name}"
+            if [[ -n "$env_value" ]]; then
+                # For JSON content, compact it to a single line while preserving structure
+                if [[ "$env_value" =~ ^\s*\{ ]] || [[ "$env_value" =~ ^\s*\[ ]]; then
+                    # This looks like JSON, first remove literal \n and \r from certificate data
+                    clean_value=$(echo "$env_value" | sed 's/\\n//g' | sed 's/\\r//g')
+                    # Then compact it properly
+                    clean_value=$(echo "$clean_value" | jq -c . 2>/dev/null || echo "$clean_value" | tr -d '\n\r' | tr -s ' ')
+                else
+                    # For non-JSON content, just remove all whitespace
+                    clean_value=$(echo "$env_value" | tr -d '[:space:]')
+                fi
+                clean_value="${clean_value//\"/\\\"}"
+                # Replace the placeholder with the cleaned value in quotes
+                line="${line//INJECT_ENV.${var_name}/\"${clean_value}\"}"
+            fi
+        fi
+        echo "$line" >> "$processed_file"
+    done < "$temp_file"
+    
+    # Replace original file with processed content
+    mv "$processed_file" "$input_file"
+    
+    # Clean up temp file
+    rm -f "$temp_file"
 }
 
-# Process setup directory files and create generated folder
+# Create or clean the generated directory
 if [ -d "$generated_dir" ]; then
-  rm -rf "${generated_dir:?}"/*
+    echo "Cleaning existing generated directory..."
+    rm -rf "${generated_dir:?}"/*
 else
-  mkdir -p "$generated_dir"
+    echo "Creating generated directory..."
+    mkdir -p "$generated_dir"
 fi
 
-# Loop through each YAML file in the setup directory
-setup_files_found=false
-for yaml_file in "${setup_dir}"/*.yaml; do
-  # Check if there are no YAML files
-  if ! [[ -e "$yaml_file" ]]; then
-    echo "No YAML files found in setup directory."
-    break
-  fi
+echo "Copying '$source_dir' and its contents to '$generated_dir'..."
 
-  setup_files_found=true
-  process_yaml_file "$yaml_file" "${generated_dir}/$(basename "$yaml_file")"
+# Get the basename of the source directory
+source_basename=$(basename "$source_dir")
+
+# Copy the entire source directory to generated
+echo "Copying directory: $source_basename"
+cp -r "$source_dir" "$generated_dir/$source_basename"
+
+echo "Processing INJECT_ENV variables in copied files..."
+
+# Process all files in the copied directories
+find "$generated_dir" -type f | while read -r file; do
+    # Check if file contains INJECT_ENV placeholders
+    if grep -q "INJECT_ENV\." "$file" 2>/dev/null; then
+        echo "Processing: $file"
+        process_file "$file"
+    fi
 done
 
-if [ "$setup_files_found" = true ]; then
-  echo "YAML files processed and saved in $generated_dir."
-fi
-
-# Process CRS files in-place
-crs_base_dir=$(dirname "$setup_dir")/crs
-
-if [ -d "$crs_base_dir" ]; then
-  echo "Processing CRS files in-place in $crs_base_dir..."
-  
-  # Find all YAML files in the crs directory
-  find "$crs_base_dir" -name "*.yaml" -type f | while read -r crs_file; do
-    # Check if file contains INJECT_ENV placeholders
-    if grep -q "INJECT_ENV\." "$crs_file"; then
-      echo "Processing $crs_file..."
-      process_yaml_file "$crs_file" "$crs_file"
-    fi
-  done
-  
-  echo "CRS files processing completed."
-else
-  echo "No CRS directory found at $crs_base_dir"
-fi
+echo "Script completed successfully!"
+echo "Directory '$source_dir' has been copied to '$generated_dir' and INJECT_ENV variables have been processed."

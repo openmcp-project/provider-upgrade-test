@@ -102,6 +102,9 @@ upgrade-test)
 
     exec_params_check
 
+    # Get the basename of SOURCE_DIR for the generated directory structure
+    SOURCE_DIR_BASENAME=$(basename "$SOURCE_DIR")
+
     print_color_message ${PURPLE} "-------Running provider upgrade test from $SOURCE_VERSION to $TARGET_VERSION for $PROVIDER_NAME using CR tests located in providers/$SOURCE_DIR..."
     current_dir=$(pwd)
    
@@ -130,8 +133,8 @@ upgrade-test)
     print_color_message ${PURPLE} "-------2. Applying CRS for source version..."
     
     
-    if [ -d "./providers/${SOURCE_DIR}/setup" ]; then
-        bash generate-yaml-rp-env.sh ./providers/${SOURCE_DIR}/setup
+    if [ -d "./providers/${SOURCE_DIR}" ]; then
+        bash generate-yaml-rp-env.sh ./providers/${SOURCE_DIR}
     fi
     
     if [ -z "$INITIALIZE_SCRIPT" ]; then
@@ -141,10 +144,20 @@ upgrade-test)
         chmod +x $INITIALIZE_SCRIPT && bash $INITIALIZE_SCRIPT
     fi
 
-    # todo: if the config doenst have a new line in the end there's no line of source:secret
-    kubectl apply -f ./generated/temp-generated/
-    chainsaw  test --test-dir ./providers/${SOURCE_DIR}/ --skip-delete 
+    # Apply the generated CRs from the new structure
+    if [ -d "./generated/${SOURCE_DIR_BASENAME}/setup" ]; then
+        kubectl apply -f ./generated/${SOURCE_DIR_BASENAME}/setup/
+    fi
+    if [ -d "./generated/${SOURCE_DIR_BASENAME}/crs" ]; then
+        kubectl apply -f ./generated/${SOURCE_DIR_BASENAME}/crs/
+    fi
+    
+    # Run chainsaw test from within the generated directory
+    pushd "./generated/${SOURCE_DIR_BASENAME}" > /dev/null
+    chainsaw test --skip-delete 
     test_result=$?
+    popd > /dev/null
+    
     if [ $test_result -ne 0 ]; then
         print_color_message ${RED} "*****provider $PROVIDER_NAME CR resources can not be all applied at source version $SOURCE_VERSION, stop tests."
         exit 1
@@ -174,7 +187,7 @@ upgrade-test)
 
     print_color_message ${PURPLE} "-------4. Checking if CRs deployed from source version is still healthy..."
 
-    chainsaw_test_file="providers/${SOURCE_DIR}/chainsaw-test.yaml"
+    chainsaw_test_file="generated/${SOURCE_DIR_BASENAME}/chainsaw-test.yaml"
     namespace="default"
     assertions=$(parse_assertions "$chainsaw_test_file")
     resources_healthy=true
