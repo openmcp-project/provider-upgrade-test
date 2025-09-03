@@ -10,4 +10,3 @@ spec:
     planName: standard
   providerConfigRef:
     name: account-provider-config
-    

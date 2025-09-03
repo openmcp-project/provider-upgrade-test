@@ -13,4 +13,3 @@ spec:
     name: upgrade-test-subaccount
   providerConfigRef:
     name: account-provider-config
-    
