@@ -61,6 +61,13 @@ spec:
     try:
     - apply:
         file: crs/service-manager.yaml
+    # Add debugging step before assertion
+    - script:
+        content: |
+          #!/bin/bash
+          echo "=== Pre-assertion ServiceManager debug ==="
+          kubectl describe servicemanager upgrade-test-subaccount-service-manager
+          echo "=== End pre-assertion debug ==="
     - assert:
         resource:
           apiVersion: account.btp.sap.crossplane.io/v1beta1 
@@ -72,6 +79,13 @@ spec:
             - status: 'True'
             (conditions[?type == 'Synced']):
             - status: 'True'
+    # Add post-assertion validation
+    - script:
+        content: |
+          #!/bin/bash
+          echo "=== Post-assertion ServiceManager validation ==="
+          kubectl describe servicemanager upgrade-test-subaccount-service-manager
+          echo "=== End post-assertion validation ==="
   - timeouts:
       assert: 480s
     try:
