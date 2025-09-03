@@ -172,9 +172,9 @@ upgrade-test)
         create_provider_image_secret $SOURCE_DOCKER_REGISTRY $SOURCE_DOCKER_USERNAME $SOURCE_DOCKER_PASSWORD $SOURCE_DOCKER_EMAIL
     fi
 
-    echo -e "${BLUE}generated provider yaml:${NC}"
-    cat generated/${PROVIDER_NAME}-source.yaml
-    printf "\n\n" 
+    print_color_message ${BLUE} "Generated provider YAML for source version: ${SOURCE_REGISTRY}"
+    # Show only the image line instead of the full YAML for brevity
+    grep -E "image:|name:" generated/${PROVIDER_NAME}-source.yaml | head -2
     wait_user_input ${WAIT_USER_INPUT} "Do you want to deploy the source version $SOURCE_VERSION provider? (y/n): "
 
 
@@ -189,24 +189,14 @@ upgrade-test)
     fi
     
     initialize_yaml_files "${SOURCE_DIR_BASENAME}"
-    # Apply the generated CRs from the new structure
-    if [ -d "./generated/${SOURCE_DIR_BASENAME}/setup" ]; then
+
+        if [ -d "./generated/${SOURCE_DIR_BASENAME}/setup" ]; then
         kubectl apply -f ./generated/${SOURCE_DIR_BASENAME}/setup/
-    fi
-    if [ -d "./generated/${SOURCE_DIR_BASENAME}/crs" ]; then
-        kubectl apply -f ./generated/${SOURCE_DIR_BASENAME}/crs/
-    fi
-    
+    fi    
     # Run chainsaw test from within the generated directory
     pushd "./generated/${SOURCE_DIR_BASENAME}" > /dev/null
-    
-    # Debug: Check what resources are actually created before running chainsaw
-    echo "Debug: Checking applied resources:"
-    kubectl get subaccount,entitlement,servicemanager,cloudmanagement --no-headers 2>/dev/null || echo "No managed resources found yet"
-    
-    echo "Debug: Checking provider status before chainsaw test:"
-    kubectl get providers/${PROVIDER_NAME} -o json | jq '.status.conditions' || echo "Provider status not available"
-    
+
+    print_color_message ${BLUE} "Running chainsaw tests for source version..."
     chainsaw test --skip-delete 
     test_result=$?
     popd > /dev/null
@@ -223,9 +213,9 @@ upgrade-test)
         print_color_message ${BLUE} "create docker secret for source provider image..."
         create_provider_image_secret $TARGET_DOCKER_REGISTRY $SOURCE_DOCKER_USERNAME $SOURCE_DOCKER_PASSWORD $SOURCE_DOCKER_EMAIL
     fi
-    print_color_message ${BLUE} "generated provider yaml:"
-    cat generated/${PROVIDER_NAME}-target.yaml
-    printf "\n\n"    
+    print_color_message ${BLUE} "Generated provider YAML for target version: ${TARGET_REGISTRY}"
+    # Show only the image line instead of the full YAML for brevity
+    grep -E "image:|name:" generated/${PROVIDER_NAME}-target.yaml | head -2
     wait_user_input ${WAIT_USER_INPUT} "Source version CRs applied, do you want to deploy the target version $TARGET_VERSION provider? (y/n): "
     print_color_message ${PURPLE} "-------3. Upgrading provider to version ${TARGET_VERSION}..."
     kubectl apply -f generated/${PROVIDER_NAME}-target.yaml

@@ -95,13 +95,14 @@ test() {
 
 create_kind_cluster() {
     test_cluster_name=local-upgrade-test-$(date '+%Y-%m-%d-%H-%M-%S')
-    kind create cluster --name ${test_cluster_name}
-    kubectl wait --for=condition=Ready nodes --all --timeout=120s
-    kubectl config use-context kind-${test_cluster_name}
-    docker logs kind-control-plane
-    docker ps
-    kubectl get events -A
-    kubectl cluster-info
+    echo "Creating kind cluster: ${test_cluster_name}..."
+    kind create cluster --name ${test_cluster_name} --quiet
+    kubectl wait --for=condition=Ready nodes --all --timeout=120s > /dev/null 2>&1
+    kubectl config use-context kind-${test_cluster_name} > /dev/null 2>&1
+    echo "✓ Cluster ${test_cluster_name} ready"
+    
+    # Only show essential cluster info
+    kubectl cluster-info --context kind-${test_cluster_name} | head -2
 }
 
 check_required_command_exists() {
