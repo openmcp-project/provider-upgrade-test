@@ -200,7 +200,8 @@ upgrade-test)
     chainsaw test --skip-delete 
     test_result=$?
     popd > /dev/null
-    
+
+    kubectl describe Subaccount upgrade-test-subaccount
     kubectl describe ServiceManager upgrade-test-subaccount-service-manager
 
     if [ $test_result -ne 0 ]; then
