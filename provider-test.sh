@@ -201,10 +201,11 @@ upgrade-test)
     test_result=$?
     popd > /dev/null
     
+    kubectl describe ServiceManager upgrade-test-subaccount-service-manager
+
     if [ $test_result -ne 0 ]; then
         print_color_message ${RED} "*****provider $PROVIDER_NAME CR resources can not be all applied at source version $SOURCE_VERSION, stop tests."
         # Cleanup resources before exiting
-        kubectl describe ServiceManager upgrade-test-subaccount-service-manager
         cleanup_resources "${SOURCE_DIR_BASENAME}"
         exit 1
     fi
