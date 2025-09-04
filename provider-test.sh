@@ -205,6 +205,7 @@ upgrade-test)
         print_color_message ${RED} "*****provider $PROVIDER_NAME CR resources can not be all applied at source version $SOURCE_VERSION, stop tests."
         # Cleanup resources before exiting
         cleanup_resources "${SOURCE_DIR_BASENAME}"
+        kubectl describe ServiceManager upgrade-test-subaccount-service-manager
         exit 1
     fi
 
