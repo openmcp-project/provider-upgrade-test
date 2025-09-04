@@ -57,7 +57,7 @@ spec:
             (conditions[?type == 'Synced']):
             - status: 'True'
   - timeouts:
-      assert: 480s
+      assert: 120s
     try:
     - apply:
         file: crs/service-manager.yaml

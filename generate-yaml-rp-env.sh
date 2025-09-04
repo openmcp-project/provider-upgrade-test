@@ -26,29 +26,50 @@ process_file() {
     cp "$input_file" "$temp_file"
     
     # Process each line looking for INJECT_ENV placeholders
-    # Use -r to preserve backslashes and handle files without trailing newlines
     while IFS= read -r line || [ -n "$line" ]; do
         if [[ "$line" =~ INJECT_ENV\.([a-zA-Z_][a-zA-Z0-9_]*) ]]; then
             var_name="${BASH_REMATCH[1]}"
             env_value="${!var_name}"
+            
             if [[ -n "$env_value" ]]; then
-                # For JSON content, compact it to a single line while preserving structure
-                if [[ "$env_value" =~ ^\s*\{ ]] || [[ "$env_value" =~ ^\s*\[ ]]; then
-                    # This looks like JSON, properly handle escaped characters and newlines
-                    # First remove actual newlines and carriage returns (not escaped ones)
-                    clean_value=$(echo "$env_value" | tr -d '\n\r')
-                    # Remove literal \n and \r sequences that might be in the data
-                    clean_value=$(echo "$clean_value" | sed 's/\\n//g' | sed 's/\\r//g' | sed 's/\\t//g')
-                    # Try to compact with jq, fallback to manual compacting if jq fails
-                    clean_value=$(echo "$clean_value" | jq -c . 2>/dev/null || echo "$clean_value" | tr -s ' ')
+                # Special handling for CIS_CREDENTIAL or similar JSON structures
+                if [[ "$var_name" == "CIS_CREDENTIAL" ]] || [[ "$var_name" == "CIS_CENTRAL_BINDING" ]]; then
+                    # Validate and format CIS credential JSON
+                    if ! echo "$env_value" | jq empty 2>/dev/null; then
+                        echo "Error: $var_name contains invalid JSON"
+                        exit 1
+                    fi
+                    
+                    # Compact JSON and properly escape for YAML
+                    clean_value=$(echo "$env_value" | jq -c .)
+                    # Escape quotes and backslashes for YAML
+                    clean_value="${clean_value//\\/\\\\}"
+                    clean_value="${clean_value//\"/\\\"}"
+                    
+                    # For multiline YAML strings, use the literal scalar style
+                    if [[ "$line" =~ ^[[:space:]]*[^:]+:[[:space:]]*INJECT_ENV\. ]]; then
+                        # This is a YAML value, use proper quoting
+                        line="${line//INJECT_ENV.${var_name}/\"${clean_value}\"}"
+                    else
+                        line="${line//INJECT_ENV.${var_name}/${clean_value}}"
+                    fi
+                elif [[ "$env_value" =~ ^\s*[\{\[] ]] || [[ "$env_value" =~ [\}\]]\s*$ ]]; then
+                    # This looks like JSON, validate and compact it
+                    if echo "$env_value" | jq empty 2>/dev/null; then
+                        clean_value=$(echo "$env_value" | jq -c .)
+                        clean_value="${clean_value//\\/\\\\}"
+                        clean_value="${clean_value//\"/\\\"}"
+                        line="${line//INJECT_ENV.${var_name}/\"${clean_value}\"}"
+                    else
+                        echo "Warning: $var_name appears to be JSON but is invalid. Using as-is."
+                        clean_value="${env_value//\"/\\\"}"
+                        line="${line//INJECT_ENV.${var_name}/\"${clean_value}\"}"
+                    fi
                 else
-                    # For non-JSON content, just remove all whitespace
-                    clean_value=$(echo "$env_value" | tr -d '[:space:]')
+                    # For non-JSON content, escape quotes and use as-is
+                    clean_value="${env_value//\"/\\\"}"
+                    line="${line//INJECT_ENV.${var_name}/\"${clean_value}\"}"
                 fi
-                # Properly escape quotes for YAML insertion
-                clean_value="${clean_value//\"/\\\"}"
-                # Replace the placeholder with the cleaned value in quotes
-                line="${line//INJECT_ENV.${var_name}/\"${clean_value}\"}"
             else
                 echo "Warning: Environment variable $var_name is not set or empty. Leaving placeholder unchanged."
             fi
@@ -62,6 +83,37 @@ process_file() {
     # Clean up temp file
     rm -f "$temp_file"
 }
+
+# Function to validate CIS credential structure
+validate_cis_credential() {
+    local cis_json="$1"
+    local required_fields=(
+        ".uaa.clientid"
+        ".uaa.clientsecret" 
+        ".uaa.url"
+        ".endpoints.accounts_service_url"
+        ".endpoints.entitlements_service_url"
+        ".endpoints.provisioning_service_url"
+    )
+    
+    for field in "${required_fields[@]}"; do
+        if ! echo "$cis_json" | jq -e "$field" >/dev/null 2>&1; then
+            echo "Warning: CIS credential missing required field: $field"
+        fi
+    done
+}
+
+# Validate CIS_CREDENTIAL environment variable if set
+if [[ -n "${CIS_CREDENTIAL:-}" ]]; then
+    echo "Validating CIS_CREDENTIAL environment variable..."
+    if echo "$CIS_CREDENTIAL" | jq empty 2>/dev/null; then
+        validate_cis_credential "$CIS_CREDENTIAL"
+        echo "CIS_CREDENTIAL validation passed"
+    else
+        echo "Error: CIS_CREDENTIAL contains invalid JSON"
+        exit 1
+    fi
+fi
 
 # Create or clean the generated directory
 if [ -d "$generated_dir" ]; then
