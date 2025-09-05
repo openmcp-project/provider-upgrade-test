@@ -56,9 +56,7 @@ process_file() {
                 elif [[ "$env_value" =~ ^\s*[\{\[] ]] || [[ "$env_value" =~ [\}\]]\s*$ ]]; then
                     # This looks like JSON, validate and compact it
                     if echo "$env_value" | jq empty 2>/dev/null; then
-                        clean_value=$(echo "$env_value" | jq -c .)
-                        clean_value="${clean_value//\\/\\\\}"
-                        clean_value="${clean_value//\"/\\\"}"
+                        clean_value=$(echo "$env_value" | tr -d '\000-\037' | jq -c .)
                         line="${line//INJECT_ENV.${var_name}/\"${clean_value}\"}"
                     else
                         echo "Warning: $var_name appears to be JSON but is invalid. Using as-is."

@@ -19,7 +19,8 @@ metadata:
     name: cis-provider-secret
 type: Opaque
 stringData:
-    data: INJECT_ENV.CIS_CENTRAL_BINDING
+    data: | 
+        INJECT_ENV.CIS_CENTRAL_BINDING
 ---
 apiVersion: btp.sap.crossplane.io/v1alpha1
 kind: ProviderConfig
