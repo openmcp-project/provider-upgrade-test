@@ -32,24 +32,7 @@ process_file() {
             env_value="${!var_name}"
             
             if [[ -n "$env_value" ]]; then
-                # Special handling for CIS_CREDENTIAL or similar JSON structures
-                if [[ "$var_name" == "CIS_CREDENTIAL" ]] || [[ "$var_name" == "CIS_CENTRAL_BINDING" ]]; then
-                    # First escape any literal newlines and other control characters for proper JSON parsing
-                    escaped_json=$(printf '%s' "$env_value" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/\r/\\r/g' | sed 's/\t/\\t/g')
-                    
-                    # Validate the escaped JSON
-                    if ! echo "$escaped_json" | jq empty 2>/dev/null; then
-                        echo "Error: $var_name contains invalid JSON"
-                        exit 1
-                    fi
-                    
-                    # Process with jq and then clean up the escaped newlines
-                    clean_value=$(echo "$escaped_json" | jq -c . | sed 's/\\n//g')
-                    line="${line//INJECT_ENV.${var_name}/${clean_value}}"
-                else
-                    # For non-JSON variables, use direct substitution
                     line="${line//INJECT_ENV.${var_name}/${env_value}}"
-                fi
             else
                 echo "Warning: Environment variable $var_name is not set or empty. Leaving placeholder unchanged."
             fi
