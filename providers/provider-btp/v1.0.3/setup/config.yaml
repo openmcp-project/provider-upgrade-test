@@ -12,16 +12,6 @@ stringData:
           "password": "INJECT_ENV.TECHNICAL_USER_PASSWORD"
         }
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-    namespace: default
-    name: cis-provider-secret
-type: Opaque
-stringData:
-    data: | 
-        INJECT_ENV.CIS_CENTRAL_BINDING
----
 apiVersion: btp.sap.crossplane.io/v1alpha1
 kind: ProviderConfig
 metadata:
@@ -41,3 +31,13 @@ spec:
             name: sa-provider-secret
             namespace: default
         source: Secret
+---
+apiVersion: v1
+kind: Secret
+metadata:
+    namespace: default
+    name: cis-provider-secret
+type: Opaque
+stringData:
+    data: | 
+        INJECT_ENV.CIS_CENTRAL_BINDING
