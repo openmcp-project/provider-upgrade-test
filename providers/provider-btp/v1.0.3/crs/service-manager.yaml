@@ -2,14 +2,13 @@ apiVersion: account.btp.sap.crossplane.io/v1beta1
 kind: ServiceManager
 metadata:
   name: upgrade-test-subaccount-service-manager
+  namespace: default
 spec:
   writeConnectionSecretToRef:
-    name: sap-btp-service-operator
+    name: upgrade-test-subaccount-service-manager
     namespace: default
   forProvider:
-    serviceInstanceName: my-service-manager
     subaccountRef:
       name: upgrade-test-subaccount
   providerConfigRef:
     name: account-provider-config
-    
