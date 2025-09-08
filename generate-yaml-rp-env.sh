@@ -32,7 +32,22 @@ process_file() {
             env_value="${!var_name}"
             
             if [[ -n "$env_value" ]]; then
-                line="${line//INJECT_ENV.${var_name}/${env_value}}"
+                # Special handling for CIS_CREDENTIAL or similar JSON structures
+                if [[ "$var_name" == "CIS_CREDENTIAL" ]] || [[ "$var_name" == "CIS_CENTRAL_BINDING" ]]; then
+                    # Validate and format CIS credential JSON
+                    if ! echo "$env_value" | jq empty 2>/dev/null; then
+                        echo "Error: $var_name contains invalid JSON"
+                        exit 1
+                    fi
+                    
+                    # Clean JSON and properly escape for parsing
+                    # NOTE: Because the certificate contains \n characters, which are escaped by jq, we need to remove \\n manually from the string
+                    clean_value=$(echo "$env_value" | jq . | sed 's/\\\\n//g')
+                    line="${line//INJECT_ENV.${var_name}/${clean_value}}"
+                else
+                    # For non-JSON variables, use direct substitution
+                    line="${line//INJECT_ENV.${var_name}/${env_value}}"
+                fi
             else
                 echo "Warning: Environment variable $var_name is not set or empty. Leaving placeholder unchanged."
             fi
