@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e 
 
 # Check if source directory path is provided
 if [ $# -eq 0 ]; then
@@ -32,7 +33,16 @@ process_file() {
             env_value="${!var_name}"
             
             if [[ -n "$env_value" ]]; then
+                # Special handling for CIS_CREDENTIAL or similar JSON structures
+                if [[ "$var_name" == "CIS_CREDENTIAL" ]] || [[ "$var_name" == "CIS_CENTRAL_BINDING" ]]; then
+                    
+                    # Process with jq and then clean up the escaped newlines
+                    clean_value=$(echo "$env_value" | jq -c .)
+                    line="${line//INJECT_ENV.${var_name}/${clean_value}}"
+                else
+                    # For non-JSON variables, use direct substitution
                     line="${line//INJECT_ENV.${var_name}/${env_value}}"
+                fi
             else
                 echo "Warning: Environment variable $var_name is not set or empty. Leaving placeholder unchanged."
             fi
