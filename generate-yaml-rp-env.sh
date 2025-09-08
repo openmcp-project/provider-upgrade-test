@@ -40,7 +40,7 @@ process_file() {
                     # Validate the escaped JSON
                     if ! echo "$escaped_json" | jq empty 2>/dev/null; then
                         echo "Error: $var_name contains invalid JSON"
-                        exit 1‚
+                        exit 1
                     fi
                     
                     # Process with jq and then clean up the escaped newlines
