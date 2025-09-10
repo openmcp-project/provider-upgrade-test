@@ -9,6 +9,82 @@ PURPLE='\033[0;35m'
 NC='\033[0m' # No Color (reset)
 
 
+# Check if a Docker image exists in a registry
+check_docker_image_exists() {
+    local registry_url=$1
+    print_color_message ${BLUE} "Checking if image exists: $registry_url"
+    
+    # For private registries, we might need authentication
+    # Try to check if we need to login first (for ghcr.io or other private registries)
+    if [[ "$registry_url" == *"ghcr.io"* ]] && [ -n "$GITHUB_TOKEN" ]; then
+        echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_USERNAME" --password-stdin >/dev/null 2>&1
+    fi
+    
+    # Use docker manifest inspect to check if image exists
+    # Suppress error output but capture return code
+    if docker manifest inspect "$registry_url" >/dev/null 2>&1; then
+        print_color_message ${GREEN} "✓ Image exists: $registry_url"
+        return 0  # Image exists
+    else
+        print_color_message ${YELLOW} "✗ Image not found: $registry_url"
+        return 1  # Image does not exist
+    fi
+}
+
+# Find the latest known version directory for a provider that is lower than the specified version
+find_latest_known_version() {
+    local provider_name=$1
+    local target_version=$2
+    local provider_dir="./providers/$provider_name"
+    
+    if [ ! -d "$provider_dir" ]; then
+        return 1
+    fi
+    
+    # Find all version directories, filter those lower than target, and get the highest one
+    local latest_lower_version=""
+    for version_dir in "$provider_dir"/*/; do
+        if [ -d "$version_dir" ]; then
+            local version=$(basename "$version_dir")
+            
+            # Compare versions: check if current version is lower than target version
+            if printf '%s\n%s\n' "$version" "$target_version" | sort -V | head -n1 | grep -q "^$version$" && [ "$version" != "$target_version" ]; then
+                # This version is lower than target version
+                if [ -z "$latest_lower_version" ]; then
+                    latest_lower_version="$version"
+                else
+                    # Check if this version is higher than our current latest_lower_version
+                    if printf '%s\n%s\n' "$latest_lower_version" "$version" | sort -V | tail -n1 | grep -q "^$version$"; then
+                        latest_lower_version="$version"
+                    fi
+                fi
+            fi
+        fi
+    done
+    
+    echo "$latest_lower_version"
+}
+
+# Copy manifests from latest known version to a new version directory
+copy_manifests_from_latest() {
+    local provider_name=$1
+    local target_version=$2
+    local latest_version=$3
+    
+    local source_path="./providers/$provider_name/$latest_version"
+    local target_path="./providers/$provider_name/$target_version"
+    
+    print_color_message ${YELLOW} "Copying manifests from latest known version $latest_version to $target_version..."
+    
+    # Create target directory
+    mkdir -p "$target_path"
+    
+    # Copy all files from latest version
+    cp -r "$source_path"/* "$target_path/"
+    
+    print_color_message ${GREEN} "Successfully copied manifests from $latest_version to $target_version"
+}
+
 check_resource_status() {
   local api_version=$1
   local kind=$2
@@ -124,6 +200,7 @@ check_required_command_exists() {
     command -v sed >/dev/null 2>&1 || { echo >&2 "sed is not installed. Aborting."; exit 1; }
     command -v yq >/dev/null 2>&1 || { echo >&2 "yq is not installed. Aborting."; exit 1; }
     command -v jq >/dev/null 2>&1 || { echo >&2 "jq is not installed. Aborting."; exit 1; }
+    command -v docker >/dev/null 2>&1 || { echo >&2 "docker is not installed. Aborting."; exit 1; }
 
 }
 
@@ -252,9 +329,39 @@ exec_params_check() {
         exit 1
     fi 
 
+    # Check if source directory exists
     if [ ! -d "./providers/$SOURCE_DIR" ] || [ ! -f "./providers/$SOURCE_DIR/chainsaw-test.yaml" ]; then
-        print_color_message ${RED} "Error: couldn't find test resource under source-dir: $SOURCE_DIR."
-        exit 1
+        print_color_message ${YELLOW} "Warning: Couldn't find test resource under source-dir: $SOURCE_DIR."
+        
+        # Extract provider name and version from SOURCE_DIR (e.g., provider-btp/v1.0.5)
+        local provider_name=$(dirname "$SOURCE_DIR")
+        local requested_version=$(basename "$SOURCE_DIR")
+        
+        print_color_message ${BLUE} "Checking if Docker image exists for version $requested_version..."
+        
+        # Check if the Docker image exists in the registry
+        if check_docker_image_exists "$SOURCE_REGISTRY"; then
+            print_color_message ${GREEN} "Docker image found: $SOURCE_REGISTRY"
+            
+            # Find the latest known version that is lower than the requested version
+            local latest_version=$(find_latest_known_version "$provider_name" "$requested_version")
+            
+            if [ -n "$latest_version" ]; then
+                print_color_message ${YELLOW} "Could not be found - copying manifests from latest known version ($latest_version) and applying them to this version."
+                
+                # Copy manifests from latest version
+                copy_manifests_from_latest "$provider_name" "$requested_version" "$latest_version"
+                
+                print_color_message ${GREEN} "Manifests copied successfully. Continuing with upgrade test."
+            else
+                print_color_message ${RED} "Error: No known versions found for provider $provider_name that are lower than $requested_version to copy manifests from."
+                exit 1
+            fi
+        else
+            print_color_message ${RED} "Error: Docker image $SOURCE_REGISTRY does not exist in registry."
+            print_color_message ${RED} "Error: Cannot proceed without valid source version."
+            exit 1
+        fi
     fi
 }
 
@@ -278,6 +385,9 @@ print_help ()
     printf '\t%s\n' "--source: source version provider docker registry with tag (required)"
     printf '\t%s\n' "--target: target version provider docker registry with tag (required)"
     printf '\t%s\n' "--source-dir: source provider CR test directory relative to providers (required)"
+    printf '\t%s\n' "             Note: If the specified source-dir doesn't exist, but the Docker image"
+    printf '\t%s\n' "             exists in the registry, manifests will be automatically copied from"
+    printf '\t%s\n' "             the latest known version to enable testing of new versions."
     printf '\t%s\n' "--provider: which provider to test (default: provider-btp)"
     printf '\t%s\n' "--use-cluster-context: do not create k8s cluster, instead use existing cluster context"
     printf '\t%s\n' "--wait-user-input: prompt for user input within test steps"
@@ -285,6 +395,8 @@ print_help ()
     printf '\t%s\n' "-h,--help: Prints help"
     printf '\n%s\n' "Example:"
     printf '\t%s\n' "./provider-test.sh upgrade-test --source crossplane/provider-btp:v1.0.3 --target crossplane/provider-btp:v1.1.0 --source-dir provider-btp/v1.0.3"
+    printf '\n%s\n' "Auto-copy example (if v1.0.5 manifests don't exist but Docker image does):"
+    printf '\t%s\n' "./provider-test.sh upgrade-test --source crossplane/provider-btp:v1.0.5 --target crossplane/provider-btp:v1.1.0 --source-dir provider-btp/v1.0.5"
 }
 
 print_test_steps_summary() {

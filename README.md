@@ -78,6 +78,29 @@ To run the test, you need to have following cli installed: `kind`, `kubectl`, [`
   --use-cluster-context my-cluster
 ```
 
+### Auto-Copy Feature for New Versions
+
+When testing upgrades from a provider version that doesn't have test manifests yet, the tool automatically helps by copying manifests from the latest available version that is lower than your specified source version.
+
+**How it works:**
+1. If the specified `--source-dir` doesn't exist, the tool checks if the Docker image exists in the registry
+2. If the image exists, it finds the latest known version lower than your source version
+3. Copies the test manifests from that version to your specified version
+4. Displays: *"Could not be found - copying manifests from latest known version and applying them to this version"*
+5. Continues with the upgrade test
+
+**Example:**
+```bash
+# Testing upgrade from v1.0.5 (source) to v1.1.0 (newly released target)
+# where v1.0.5 doesn't have manifests yet
+./provider-test.sh upgrade-test \
+  --source crossplane/provider-btp:v1.0.5 \
+  --target crossplane/provider-btp:v1.1.0 \
+  --source-dir provider-btp/v1.0.5
+```
+
+This feature unblocks testing when you need to upgrade from a version that doesn't have manifests, allowing you to test the upgrade path to newly released versions.
+
 ## Development
 Understanding the details of the tool is beneficial to developers. 
 

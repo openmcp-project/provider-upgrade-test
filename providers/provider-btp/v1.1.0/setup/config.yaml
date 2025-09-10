@@ -6,28 +6,15 @@ metadata:
 type: Opaque
 stringData:
     credentials: |
-        {
-          "email": INJECT_ENV.TECHNICAL_USER_EMAIL,
-          "username": INJECT_ENV.TECHNICAL_USER_EMAIL,
-          "password": INJECT_ENV.TECHNICAL_USER_PASSWORD
-        }
----
-apiVersion: v1
-kind: Secret
-metadata:
-    namespace: default
-    name: cis-provider-secret
-type: Opaque
-stringData:
-    data: INJECT_ENV.CIS_CENTRAL_BINDING
+        INJECT_ENV.BTP_TECHNICAL_USER
 ---
 apiVersion: btp.sap.crossplane.io/v1alpha1
 kind: ProviderConfig
 metadata:
     name: account-provider-config
 spec:
-    globalAccount: INJECT_ENV.GLOBAL_ACCOUNT
-    cliServerUrl: INJECT_ENV.CLI_SERVER_URL
+    globalAccount: "INJECT_ENV.GLOBAL_ACCOUNT"
+    cliServerUrl: "INJECT_ENV.CLI_SERVER_URL"
     cisCredentials:
         secretRef:
             name: cis-provider-secret
@@ -40,3 +27,13 @@ spec:
             name: sa-provider-secret
             namespace: default
         source: Secret
+---
+apiVersion: v1
+kind: Secret
+metadata:
+    namespace: default
+    name: cis-provider-secret
+type: Opaque
+stringData:
+    data: | 
+        INJECT_ENV.CIS_CENTRAL_BINDING

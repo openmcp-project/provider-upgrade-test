@@ -1,0 +1,12 @@
+apiVersion: account.btp.sap.crossplane.io/v1alpha1
+kind: Subscription
+metadata:
+  name: my-subscription
+spec:
+  cloudManagementRef: 
+    name: my-cis
+  forProvider:
+    appName: cias
+    planName: standard
+  providerConfigRef:
+    name: account-provider-config

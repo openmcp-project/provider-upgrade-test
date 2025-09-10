@@ -9,10 +9,10 @@ spec:
     cleanup: 120s
   steps:
   - timeouts:
-      assert: 180s
+      assert: 300s
     try:
     - apply:
-        file: ../v1.0.3/crs/subaccount.yaml
+        file: crs/subaccount.yaml
     - assert:
         resource:
           apiVersion: account.btp.sap.crossplane.io/v1alpha1
@@ -28,7 +28,7 @@ spec:
       assert: 120s
     try:
     - apply:
-        file: ../v1.0.3/crs/cis-entitlement.yaml
+        file: crs/cis-entitlement.yaml
     - assert:
         resource:
           apiVersion: account.btp.sap.crossplane.io/v1alpha1
@@ -44,7 +44,7 @@ spec:
       assert: 120s
     try:
     - apply:
-        file: ../v1.0.3/crs/kyma-entitlement.yaml
+        file: crs/kyma-entitlement.yaml
     - assert:
         resource:
           apiVersion: account.btp.sap.crossplane.io/v1alpha1
@@ -57,10 +57,10 @@ spec:
             (conditions[?type == 'Synced']):
             - status: 'True'
   - timeouts:
-      assert: 480s
+      assert: 120s
     try:
     - apply:
-        file: ../v1.0.3/crs/service-manager.yaml
+        file: crs/service-manager.yaml
     - assert:
         resource:
           apiVersion: account.btp.sap.crossplane.io/v1beta1 
@@ -76,7 +76,7 @@ spec:
       assert: 480s
     try:
     - apply:
-        file: ../v1.0.3/crs/cis-local.yaml
+        file: crs/cis-local.yaml
     - assert:
         resource:
           apiVersion: account.btp.sap.crossplane.io/v1alpha1  
@@ -92,7 +92,7 @@ spec:
       assert: 180s  
     try:
     - apply:
-        file: ../v1.0.3/crs/cloudfoundry-env.yaml
+        file: crs/cloudfoundry-env.yaml
     - assert:
         resource:
           apiVersion: environment.btp.sap.crossplane.io/v1alpha1 
@@ -108,7 +108,7 @@ spec:
       assert: 180s  
     try:
     - apply:
-        file: ../v1.0.3/crs/subscription.yaml
+        file: crs/subscription.yaml
     - assert:
         resource:
           apiVersion: account.btp.sap.crossplane.io/v1alpha1
@@ -124,7 +124,7 @@ spec:
       assert: 1800s  
     try:
     - apply:
-        file: ../v1.0.3/crs/kyma-env.yaml
+        file: crs/kyma-env.yaml
     - assert:
         resource:
           apiVersion: environment.btp.sap.crossplane.io/v1alpha1 
