@@ -6,11 +6,7 @@ metadata:
 type: Opaque
 stringData:
     credentials: |
-        {
-          "email": "INJECT_ENV.TECHNICAL_USER_EMAIL",
-          "username": "INJECT_ENV.TECHNICAL_USER_EMAIL",
-          "password": "INJECT_ENV.TECHNICAL_USER_PASSWORD"
-        }
+        INJECT_ENV.BTP_TECHNICAL_USER
 ---
 apiVersion: btp.sap.crossplane.io/v1alpha1
 kind: ProviderConfig
