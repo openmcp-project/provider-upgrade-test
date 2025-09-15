@@ -210,8 +210,8 @@ upgrade-test)
 
     sed  -e  "s|DOCKER_REGISTRY_TAG|${TARGET_REGISTRY}|g" -e "s|PROVIDER_NAME|${PROVIDER_NAME}|g" resources/provider-cr-template.yaml > generated/${PROVIDER_NAME}-target.yaml
     if [ "$TARGET_NEED_AUTH" == true ]; then
-        print_color_message ${BLUE} "create docker secret for source provider image..."
-        create_provider_image_secret $TARGET_DOCKER_REGISTRY $SOURCE_DOCKER_USERNAME $SOURCE_DOCKER_PASSWORD $SOURCE_DOCKER_EMAIL
+        print_color_message ${BLUE} "create docker secret for target provider image..."
+        create_provider_image_secret $TARGET_DOCKER_REGISTRY $TARGET_DOCKER_USERNAME $TARGET_DOCKER_PASSWORD $TARGET_DOCKER_EMAIL
     fi
     print_color_message ${BLUE} "Generated provider YAML for target version: ${TARGET_REGISTRY}"
     # Show only the image line instead of the full YAML for brevity

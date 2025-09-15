@@ -1,0 +1,218 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: generated-chainsaw-test
+spec:
+  timeouts: 
+    apply: 180s
+    assert: 180s
+    cleanup: 180s
+  steps:
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/organization.yaml
+    - assert:
+        resource:
+          apiVersion: cloudfoundry.crossplane.io/v1alpha1
+          kind: Organization
+          metadata:
+            name: e2e-org
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/org_members.yaml
+    - assert:
+        resource:
+          apiVersion: cloudfoundry.crossplane.io/v1alpha1
+          kind: OrgMembers
+          metadata:
+            name: e2e-org-members
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/org_role.yaml
+    - assert:
+        resource:
+          apiVersion: cloudfoundry.crossplane.io/v1alpha1
+          kind: OrgRole
+          metadata:
+            name: e2e-org-role-org-ref
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/org_role.yaml
+    - assert:
+        resource:
+          apiVersion: cloudfoundry.crossplane.io/v1alpha1
+          kind: OrgRole
+          metadata:
+            name: e2e-org-role-org-name
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/space.yaml
+    - assert:
+        resource:
+          apiVersion: cloudfoundry.crossplane.io/v1alpha1
+          kind: Space
+          metadata:
+            name: e2e-space-org-ref
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/space.yaml
+    - assert:
+        resource:
+          apiVersion: cloudfoundry.crossplane.io/v1alpha1
+          kind: Space
+          metadata:
+            name: e2e-space-org-name
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/space.yaml
+    - assert:
+        resource:
+          apiVersion: cloudfoundry.crossplane.io/v1alpha1
+          kind: Space
+          metadata:
+            name: service-space
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/space_members.yaml
+    - assert:
+        resource:
+          apiVersion: cloudfoundry.crossplane.io/v1alpha1
+          kind: SpaceMembers
+          metadata:
+            name: e2e-space-members
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/space_role.yaml
+    - assert:
+        resource:
+          apiVersion: cloudfoundry.crossplane.io/v1alpha1
+          kind: SpaceRole
+          metadata:
+            name: e2e-space-role
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/space_quota.yaml
+    - assert:
+        resource:
+          apiVersion: cloudfoundry.crossplane.io/v1alpha1
+          kind: SpaceQuota
+          metadata:
+            name: e2e-space-quota
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/ups.yaml
+    - assert:
+        resource:
+          apiVersion: cloudfoundry.crossplane.io/v1alpha1
+          kind: ServiceInstance
+          metadata:
+            name: e2e-ups
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/service_instance.yaml
+    - assert:
+        resource:
+          apiVersion: cloudfoundry.crossplane.io/v1alpha1
+          kind: ServiceInstance
+          metadata:
+            name: e2e-service-instance
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/scb.key.yaml
+    - assert:
+        resource:
+          apiVersion: cloudfoundry.crossplane.io/v1alpha1
+          kind: ServiceCredentialBinding
+          metadata:
+            name: e2e-scb-key
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'

@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    namespace: default #Make sure the namespace is not crossplane-system
+    name: cf-provider-secret
+type: Opaque
+stringData:
+    credentials: |
+        INJECT_ENV.CF_CREDENTIALS
+---
+apiVersion: cloudfoundry.crossplane.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: default
+spec:
+  apiEndpoint: INJECT_ENV.CF_ENVIRONMENT
+  credentials:
+    source: Secret
+    secretRef:
+      name: cf-provider-secret
+      namespace: default
+      key: credentials

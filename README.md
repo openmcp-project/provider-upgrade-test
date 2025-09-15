@@ -136,7 +136,7 @@ mkdir providers/provider-example/$VERSION/crs
 # folder to put set up resources containing credentials before CRs, credentials can be injected via INJECT_ENV.VAR_NAME
 mkdir providers/provider-example/$VERSION/setup
 
-# add your set up config to the setup folder if exists, for example provider-config:
+# add your set up config to the setup folder if exists, for example secrets (NOTE: secrets are not allowed to be in the crossplane-system namespace):
 cat <<EOF > providers/provider-example/$VERSION/setup/config.yaml
 apiVersion: v1
 kind: Secret

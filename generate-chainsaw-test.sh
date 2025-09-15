@@ -52,15 +52,35 @@ spec:
   steps:
 EOF
 
+# Function to extract resource info from a YAML document
+extract_resource_info() {
+    local yaml_content="$1"
+    local apiVersion=$(echo "$yaml_content" | awk '/^apiVersion:/ {print $2; exit}')
+    local kind=$(echo "$yaml_content" | awk '/^kind:/ {print $2; exit}')
+    local name=$(echo "$yaml_content" | awk '/^  name:/ {print $2; exit}')
+    echo "$apiVersion|$kind|$name"
+}
+
 # Iterate over the ordered files
 for file in "${ORDERED_FILES[@]}"; do
-    # Extract apiVersion, kind, and metadata.name from the file
-    apiVersion=$(awk '/^apiVersion:/ {print $2}' "$file")
-    kind=$(awk '/^kind:/ {print $2}' "$file")
-    name=$(awk '/^  name:/ {print $2}' "$file")
-
-    # Append the step to the chainsaw-test.yaml file
-    cat <<EOF >> "$OUTPUT_FILE"
+    # Check if file contains multiple YAML documents separated by ---
+    if grep -q "^---" "$file"; then
+        # Split the file by --- and process each document
+        awk 'BEGIN{RS="^---"} NF{print > "/tmp/yaml_doc_" NR ".tmp"}' "$file"
+        
+        # Process each temporary document file
+        for doc_file in /tmp/yaml_doc_*.tmp; do
+            if [[ -f "$doc_file" && -s "$doc_file" ]]; then
+                # Skip if document is just comments or empty
+                if grep -q "^apiVersion:" "$doc_file"; then
+                    yaml_content=$(cat "$doc_file")
+                    resource_info=$(extract_resource_info "$yaml_content")
+                    IFS='|' read -r apiVersion kind name <<< "$resource_info"
+                    
+                    # Only add if we have valid values
+                    if [[ -n "$apiVersion" && -n "$kind" && -n "$name" ]]; then
+                        # Append the step to the chainsaw-test.yaml file
+                        cat <<EOF >> "$OUTPUT_FILE"
   - timeouts:
       assert: 180s
     try:
@@ -78,6 +98,39 @@ for file in "${ORDERED_FILES[@]}"; do
             (conditions[?type == 'Synced']):
             - status: 'True'
 EOF
+                    fi
+                fi
+            fi
+        done
+        
+        # Clean up temporary files
+        rm -f /tmp/yaml_doc_*.tmp
+    else
+        # Single document - use original logic
+        apiVersion=$(awk '/^apiVersion:/ {print $2}' "$file")
+        kind=$(awk '/^kind:/ {print $2}' "$file")
+        name=$(awk '/^  name:/ {print $2}' "$file")
+
+        # Append the step to the chainsaw-test.yaml file
+        cat <<EOF >> "$OUTPUT_FILE"
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/$(basename "$file")
+    - assert:
+        resource:
+          apiVersion: $apiVersion
+          kind: $kind
+          metadata:
+            name: $name
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+EOF
+    fi
 done
 
 echo "$OUTPUT_FILE has been generated in the current directory."
