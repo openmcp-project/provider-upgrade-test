@@ -94,10 +94,6 @@ check_resource_status() {
   # Query the resource using kubectl and check status conditions
   resource_status=$(kubectl get "$kind" "$name" --namespace="$namespace" -o json)
 
-  # Debug: Print the actual resource status
-  echo "Debug: Resource $kind/$name status:"
-  echo "$resource_status" | jq '.status' || echo "No status field found"
-
   ready_status=$(echo "$resource_status" | jq -r '.status.conditions[] | select(.type == "Ready") | .status')
   synced_status=$(echo "$resource_status" | jq -r '.status.conditions[] | select(.type == "Synced") | .status')
 
