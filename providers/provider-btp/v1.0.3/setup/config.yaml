@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-    namespace: default
+    namespace: default # Make sure this is not crossplane-system
     name: sa-provider-secret
 type: Opaque
 stringData:
