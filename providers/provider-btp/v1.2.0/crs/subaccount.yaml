@@ -1,0 +1,19 @@
+apiVersion: account.btp.sap.crossplane.io/v1alpha1
+kind: Subaccount
+metadata:
+  name: upgrade-test-subaccount
+spec:
+  forProvider:
+    betaEnabled: true
+    description: hello subaccount
+    displayName: upgrade-test-subaccount-PLACEHOLDER
+    labels:
+      safe-to-delete: ["yes"]
+      BUILD_ID: [ "PLACEHOLDER" ]
+    region: eu20
+    subaccountAdmins:
+      - INJECT_ENV.TECHNICAL_USER_EMAIL
+    subdomain: dummy-upgrade-test-subaccount-PLACEHOLDER
+    usedForProduction: "NOT_USED_FOR_PRODUCTION"
+  providerConfigRef:
+    name: account-provider-config

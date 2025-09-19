@@ -1,0 +1,13 @@
+apiVersion: account.btp.sap.crossplane.io/v1alpha1
+kind: Entitlement
+metadata:
+  name: kyma-entitlement
+spec:
+  forProvider:
+    serviceName: kymaruntime
+    servicePlanName: azure
+    amount: 1
+    subaccountRef:
+      name: upgrade-test-subaccount
+  providerConfigRef:
+    name: account-provider-config

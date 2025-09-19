@@ -1,0 +1,12 @@
+apiVersion: account.btp.sap.crossplane.io/v1alpha1
+kind: DirectoryEntitlement
+metadata:
+  name: directory-ent-cis-local
+spec:
+  forProvider:
+    directoryRef:
+      name: my-directory
+    planName: local
+    serviceName: cis
+  providerConfigRef:
+    name: account-provider-config

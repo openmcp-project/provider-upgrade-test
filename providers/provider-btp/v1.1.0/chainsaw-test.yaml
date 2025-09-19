@@ -4,28 +4,12 @@ metadata:
   name: test-btp-account
 spec:
   timeouts: 
-    apply: 10s
-    assert: 20s
-    cleanup: 120s
+    apply: 180s
+    assert: 180s
+    cleanup: 180s
   steps:
   - timeouts:
-      assert: 300s
-    try:
-    - apply:
-        file: crs/subaccount.yaml
-    - assert:
-        resource:
-          apiVersion: account.btp.sap.crossplane.io/v1alpha1
-          kind: Subaccount
-          metadata:
-            name: upgrade-test-subaccount
-          status:
-            (conditions[?type == 'Ready']):
-            - status: 'True'
-            (conditions[?type == 'Synced']):
-            - status: 'True'
-  - timeouts:
-      assert: 120s
+      assert: 180s
     try:
     - apply:
         file: crs/cis-entitlement.yaml
@@ -41,7 +25,71 @@ spec:
             (conditions[?type == 'Synced']):
             - status: 'True'
   - timeouts:
-      assert: 120s
+      assert: 180s
+    try:
+    - apply:
+        file: crs/cis-local.yaml
+    - assert:
+        resource:
+          apiVersion: account.btp.sap.crossplane.io/v1alpha1
+          kind: CloudManagement
+          metadata:
+            name: my-cis
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/cloudfoundry-env.yaml
+    - assert:
+        resource:
+          apiVersion: environment.btp.sap.crossplane.io/v1alpha1
+          kind: CloudFoundryEnvironment
+          metadata:
+            name: cf-env-dummy-test-upgrade
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/directory.yaml
+    - assert:
+        resource:
+          apiVersion: account.btp.sap.crossplane.io/v1alpha1
+          kind: Directory
+          metadata:
+            name: my-directory
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/directoryentitlement.yaml
+    - assert:
+        resource:
+          apiVersion: account.btp.sap.crossplane.io/v1alpha1
+          kind: DirectoryEntitlement
+          metadata:
+            name: directory-ent-cis-local
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
     try:
     - apply:
         file: crs/kyma-entitlement.yaml
@@ -57,13 +105,29 @@ spec:
             (conditions[?type == 'Synced']):
             - status: 'True'
   - timeouts:
-      assert: 120s
+      assert: 180s
+    try:
+    - apply:
+        file: crs/kyma-env.yaml
+    - assert:
+        resource:
+          apiVersion: environment.btp.sap.crossplane.io/v1alpha1
+          kind: KymaEnvironment
+          metadata:
+            name: my-kyma-env
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
     try:
     - apply:
         file: crs/service-manager.yaml
     - assert:
         resource:
-          apiVersion: account.btp.sap.crossplane.io/v1beta1 
+          apiVersion: account.btp.sap.crossplane.io/v1beta1
           kind: ServiceManager
           metadata:
             name: upgrade-test-subaccount-service-manager
@@ -73,39 +137,71 @@ spec:
             (conditions[?type == 'Synced']):
             - status: 'True'
   - timeouts:
-      assert: 480s
+      assert: 180s
     try:
     - apply:
-        file: crs/cis-local.yaml
+        file: crs/servicebinding.yaml
     - assert:
         resource:
-          apiVersion: account.btp.sap.crossplane.io/v1alpha1  
-          kind: CloudManagement
+          apiVersion: account.btp.sap.crossplane.io/v1alpha1
+          kind: ServiceBinding
           metadata:
-            name: my-cis
+            name: upgrade-destination-binding
           status:
             (conditions[?type == 'Ready']):
             - status: 'True'
             (conditions[?type == 'Synced']):
             - status: 'True'
   - timeouts:
-      assert: 180s  
+      assert: 180s
     try:
     - apply:
-        file: crs/cloudfoundry-env.yaml
+        file: crs/serviceinstance.yaml
     - assert:
         resource:
-          apiVersion: environment.btp.sap.crossplane.io/v1alpha1 
-          kind: CloudFoundryEnvironment
+          apiVersion: account.btp.sap.crossplane.io/v1alpha1
+          kind: ServiceInstance
           metadata:
-            name: cf-env-dummy-test-upgrade
+            name: upgrade-destination-instance
           status:
             (conditions[?type == 'Ready']):
             - status: 'True'
             (conditions[?type == 'Synced']):
             - status: 'True'
   - timeouts:
-      assert: 180s  
+      assert: 180s
+    try:
+    - apply:
+        file: crs/subaccount.yaml
+    - assert:
+        resource:
+          apiVersion: account.btp.sap.crossplane.io/v1alpha1
+          kind: Subaccount
+          metadata:
+            name: upgrade-test-subaccount
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/subacountapicredential.yaml
+    - assert:
+        resource:
+          apiVersion: security.btp.sap.crossplane.io/v1alpha1
+          kind: SubaccountApiCredential
+          metadata:
+            name: sac-subaccountapicredentials
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
     try:
     - apply:
         file: crs/subscription.yaml
@@ -120,20 +216,3 @@ spec:
             - status: 'True'
             (conditions[?type == 'Synced']):
             - status: 'True'
-  - timeouts:
-      assert: 1800s  
-    try:
-    - apply:
-        file: crs/kyma-env.yaml
-    - assert:
-        resource:
-          apiVersion: environment.btp.sap.crossplane.io/v1alpha1 
-          kind: KymaEnvironment
-          metadata:
-            name: my-kyma-env
-          status:
-            (conditions[?type == 'Ready']):
-            - status: 'True'
-            (conditions[?type == 'Synced']):
-            - status: 'True'
-
