@@ -1,0 +1,15 @@
+apiVersion: account.btp.sap.crossplane.io/v1alpha1
+kind: CloudManagement
+metadata:
+  name: my-cis
+spec:
+  writeConnectionSecretToRef:
+    name: my-cis
+    namespace: default
+  forProvider:
+    serviceManagerRef:
+      name: upgrade-test-subaccount-service-manager
+    subaccountRef:
+      name: upgrade-test-subaccount
+  providerConfigRef:
+    name: account-provider-config
