@@ -9,6 +9,38 @@ spec:
     cleanup: 180s
   steps:
   - timeouts:
+    assert: 180s
+  try:
+  - apply:
+      file: crs/subaccount.yaml
+  - assert:
+      resource:
+        apiVersion: account.btp.sap.crossplane.io/v1alpha1
+        kind: Subaccount
+        metadata:
+          name: upgrade-test-subaccount
+        status:
+          (conditions[?type == 'Ready']):
+          - status: 'True'
+          (conditions[?type == 'Synced']):
+          - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/service-manager.yaml
+    - assert:
+        resource:
+          apiVersion: account.btp.sap.crossplane.io/v1beta1
+          kind: ServiceManager
+          metadata:
+            name: upgrade-test-subaccount-service-manager
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'  
+  - timeouts:
       assert: 180s
     try:
     - apply:
@@ -124,22 +156,6 @@ spec:
       assert: 180s
     try:
     - apply:
-        file: crs/service-manager.yaml
-    - assert:
-        resource:
-          apiVersion: account.btp.sap.crossplane.io/v1beta1
-          kind: ServiceManager
-          metadata:
-            name: upgrade-test-subaccount-service-manager
-          status:
-            (conditions[?type == 'Ready']):
-            - status: 'True'
-            (conditions[?type == 'Synced']):
-            - status: 'True'
-  - timeouts:
-      assert: 180s
-    try:
-    - apply:
         file: crs/servicebinding.yaml
     - assert:
         resource:
@@ -163,22 +179,6 @@ spec:
           kind: ServiceInstance
           metadata:
             name: upgrade-destination-instance
-          status:
-            (conditions[?type == 'Ready']):
-            - status: 'True'
-            (conditions[?type == 'Synced']):
-            - status: 'True'
-  - timeouts:
-      assert: 180s
-    try:
-    - apply:
-        file: crs/subaccount.yaml
-    - assert:
-        resource:
-          apiVersion: account.btp.sap.crossplane.io/v1alpha1
-          kind: Subaccount
-          metadata:
-            name: upgrade-test-subaccount
           status:
             (conditions[?type == 'Ready']):
             - status: 'True'
