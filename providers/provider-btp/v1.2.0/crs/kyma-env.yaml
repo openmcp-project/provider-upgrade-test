@@ -1,0 +1,15 @@
+apiVersion: environment.btp.sap.crossplane.io/v1alpha1
+kind: KymaEnvironment
+metadata:
+  name: my-kyma-env
+spec:
+  cloudManagementRef:
+    name: my-cis
+  forProvider:
+    parameters:
+      region: westeurope 
+    planName: azure
+  providerConfigRef:
+    name: account-provider-config
+  subaccountRef:
+    name: upgrade-test-subaccount

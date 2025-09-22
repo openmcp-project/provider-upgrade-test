@@ -1,0 +1,17 @@
+apiVersion: account.btp.sap.crossplane.io/v1alpha1
+kind: ServiceInstance
+metadata:
+  name: upgrade-destination-instance
+spec:
+  forProvider:
+    name: upgrade-destination-instance
+    parameters:
+      HTML5Runtime_enabled: false
+    serviceManagerRef:
+      name: upgrade-test-subaccount-service-manager
+    offeringName: destination
+    planName: lite
+    subaccountRef:
+      name: upgrade-test-subaccount
+  providerConfigRef:
+    name: account-provider-config
