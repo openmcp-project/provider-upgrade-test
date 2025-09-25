@@ -4,47 +4,31 @@ metadata:
   name: test-btp-account
 spec:
   timeouts: 
-    apply: 180s
-    assert: 180s
-    cleanup: 180s
+    apply: 10s
+    assert: 20s
+    cleanup: 120s
   steps:
   - timeouts:
-    assert: 180s
-  try:
-  - apply:
-      file: crs/subaccount.yaml
-  - assert:
-      resource:
-        apiVersion: account.btp.sap.crossplane.io/v1alpha1
-        kind: Subaccount
-        metadata:
-          name: upgrade-test-subaccount
-        status:
-          (conditions[?type == 'Ready']):
-          - status: 'True'
-          (conditions[?type == 'Synced']):
-          - status: 'True'
-  - timeouts:
-      assert: 180s
+      assert: 300s
     try:
     - apply:
-        file: crs/service-manager.yaml
+        file: crs/01_subaccount.yaml
     - assert:
         resource:
-          apiVersion: account.btp.sap.crossplane.io/v1beta1
-          kind: ServiceManager
+          apiVersion: account.btp.sap.crossplane.io/v1alpha1
+          kind: Subaccount
           metadata:
-            name: upgrade-test-subaccount-service-manager
+            name: upgrade-test-subaccount
           status:
             (conditions[?type == 'Ready']):
             - status: 'True'
             (conditions[?type == 'Synced']):
-            - status: 'True'  
+            - status: 'True'
   - timeouts:
-      assert: 180s
+      assert: 120s
     try:
     - apply:
-        file: crs/cis-entitlement.yaml
+        file: crs/02_cis-entitlement.yaml
     - assert:
         resource:
           apiVersion: account.btp.sap.crossplane.io/v1alpha1
@@ -57,10 +41,42 @@ spec:
             (conditions[?type == 'Synced']):
             - status: 'True'
   - timeouts:
-      assert: 180s
+      assert: 120s
     try:
     - apply:
-        file: crs/cis-local.yaml
+        file: crs/03_kyma-entitlement.yaml
+    - assert:
+        resource:
+          apiVersion: account.btp.sap.crossplane.io/v1alpha1
+          kind: Entitlement
+          metadata:
+            name: kyma-entitlement
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 120s
+    try:
+    - apply:
+        file: crs/04_service-manager.yaml
+    - assert:
+        resource:
+          apiVersion: account.btp.sap.crossplane.io/v1beta1
+          kind: ServiceManager
+          metadata:
+            name: upgrade-test-subaccount-service-manager
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 480s
+    try:
+    - apply:
+        file: crs/05_cis-local.yaml
     - assert:
         resource:
           apiVersion: account.btp.sap.crossplane.io/v1alpha1
@@ -76,7 +92,7 @@ spec:
       assert: 180s
     try:
     - apply:
-        file: crs/cloudfoundry-env.yaml
+        file: crs/06_cloudfoundry-env.yaml
     - assert:
         resource:
           apiVersion: environment.btp.sap.crossplane.io/v1alpha1
@@ -92,55 +108,23 @@ spec:
       assert: 180s
     try:
     - apply:
-        file: crs/directory.yaml
+        file: crs/07_subscription.yaml
     - assert:
         resource:
           apiVersion: account.btp.sap.crossplane.io/v1alpha1
-          kind: Directory
+          kind: Subscription
           metadata:
-            name: my-directory
+            name: my-subscription
           status:
             (conditions[?type == 'Ready']):
             - status: 'True'
             (conditions[?type == 'Synced']):
             - status: 'True'
   - timeouts:
-      assert: 180s
+      assert: 1800s
     try:
     - apply:
-        file: crs/directoryentitlement.yaml
-    - assert:
-        resource:
-          apiVersion: account.btp.sap.crossplane.io/v1alpha1
-          kind: DirectoryEntitlement
-          metadata:
-            name: directory-ent-cis-local
-          status:
-            (conditions[?type == 'Ready']):
-            - status: 'True'
-            (conditions[?type == 'Synced']):
-            - status: 'True'
-  - timeouts:
-      assert: 180s
-    try:
-    - apply:
-        file: crs/kyma-entitlement.yaml
-    - assert:
-        resource:
-          apiVersion: account.btp.sap.crossplane.io/v1alpha1
-          kind: Entitlement
-          metadata:
-            name: kyma-entitlement
-          status:
-            (conditions[?type == 'Ready']):
-            - status: 'True'
-            (conditions[?type == 'Synced']):
-            - status: 'True'
-  - timeouts:
-      assert: 180s
-    try:
-    - apply:
-        file: crs/kyma-env.yaml
+        file: crs/08_kyma-env.yaml
     - assert:
         resource:
           apiVersion: environment.btp.sap.crossplane.io/v1alpha1
@@ -156,13 +140,13 @@ spec:
       assert: 180s
     try:
     - apply:
-        file: crs/servicebinding.yaml
+        file: crs/09_directory.yaml
     - assert:
         resource:
           apiVersion: account.btp.sap.crossplane.io/v1alpha1
-          kind: ServiceBinding
+          kind: Directory
           metadata:
-            name: upgrade-destination-binding
+            name: my-directory
           status:
             (conditions[?type == 'Ready']):
             - status: 'True'
@@ -172,7 +156,23 @@ spec:
       assert: 180s
     try:
     - apply:
-        file: crs/serviceinstance.yaml
+        file: crs/10_directoryentitlement.yaml
+    - assert:
+        resource:
+          apiVersion: account.btp.sap.crossplane.io/v1alpha1
+          kind: DirectoryEntitlement
+          metadata:
+            name: directory-ent-cis-local
+          status:
+            (conditions[?type == 'Ready']):
+            - status: 'True'
+            (conditions[?type == 'Synced']):
+            - status: 'True'
+  - timeouts:
+      assert: 180s
+    try:
+    - apply:
+        file: crs/11_serviceinstance.yaml
     - assert:
         resource:
           apiVersion: account.btp.sap.crossplane.io/v1alpha1
@@ -188,13 +188,13 @@ spec:
       assert: 180s
     try:
     - apply:
-        file: crs/subacountapicredential.yaml
+        file: crs/12_servicebinding.yaml
     - assert:
         resource:
-          apiVersion: security.btp.sap.crossplane.io/v1alpha1
-          kind: SubaccountApiCredential
+          apiVersion: account.btp.sap.crossplane.io/v1alpha1
+          kind: ServiceBinding
           metadata:
-            name: sac-subaccountapicredentials
+            name: upgrade-destination-binding
           status:
             (conditions[?type == 'Ready']):
             - status: 'True'
@@ -204,13 +204,13 @@ spec:
       assert: 180s
     try:
     - apply:
-        file: crs/subscription.yaml
+        file: crs/13_subacountapicredential.yaml
     - assert:
         resource:
-          apiVersion: account.btp.sap.crossplane.io/v1alpha1
-          kind: Subscription
+          apiVersion: security.btp.sap.crossplane.io/v1alpha1
+          kind: SubaccountApiCredential
           metadata:
-            name: my-subscription
+            name: sac-subaccountapicredentials
           status:
             (conditions[?type == 'Ready']):
             - status: 'True'
