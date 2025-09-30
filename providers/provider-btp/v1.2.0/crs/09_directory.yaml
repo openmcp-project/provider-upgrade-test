@@ -4,10 +4,14 @@ metadata:
   name: my-directory
 spec:
   forProvider:
-    description: test dir
+    description: "PLACEHOLDER-created by code"
     directoryAdmins:
       - INJECT_ENV.TECHNICAL_USER_EMAIL
       - INJECT_ENV.SECOND_DIRECTORY_ADMIN_EMAIL
-    displayName: upgrade test directory
+    directoryFeatures:
+      - "DEFAULT"
+      - "ENTITLEMENTS"
+      - "AUTHORIZATIONS"
+    displayName: upgrade-test-directory-PLACEHOLDER
   providerConfigRef:
     name: account-provider-config
