@@ -1,0 +1,12 @@
+apiVersion: security.btp.sap.crossplane.io/v1alpha1
+kind: SubaccountTrustConfiguration
+metadata:
+  name: upgrade-test-subaccount-trustconfiguration
+spec:
+  forProvider:
+    name: upgrade-test-e2e-subacc-trust-PLACEHOLDER
+    description: "subaccount trust configuration upgrade test"
+    subaccountRef:
+      name: upgrade-test-subaccount
+    identityProvider: INJECT_ENV.IDP_URL
+
